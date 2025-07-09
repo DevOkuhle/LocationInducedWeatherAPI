@@ -40,7 +40,7 @@ jobs:
         
   detekt_setup:
     runs-on: ubuntu-latest
-    needs: [lint_setup, unit_test, build, build_failure_notifications, push_notifications]
+    needs: [unit_test, build, build_failure_notifications, push_notifications]
     steps:
     - name: Run Detekt
       run: ./gradlew detekt -Pdetekt.ignoreFailures=true
@@ -107,7 +107,7 @@ jobs:
 
   firebase_setup:
     runs-on : ubuntu-latest
-    needs: [detekt_setup, lint_setup, unit_test, build, build_failure_notifications, push_notifications]
+    needs: [unit_test, build, build_failure_notifications, push_notifications]
     steps:
     - name: Decode Firebase service account
       run: |

@@ -4,4 +4,7 @@ import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
-data class CloudPercentage(@Json(name = "clouds") var couldPercentage: Int = -1)
+data class Clouds(
+    @Json(name = "all")
+    var cloudPercentage: Int = -1
+)

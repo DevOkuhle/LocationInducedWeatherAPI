@@ -1,3 +1,17 @@
 <resources>
     <string name="app_name">LocationInducedWeatherApp</string>
+    <string name="add_favourite_location">Add location to Favourites</string>
+    <string name="view_favourites">Favourites</string>
+    <string name="min_temperature">min</string>
+    <string name="current_temperature">Current</string>
+    <string name="max_temperature">max</string>
+    <string name="image_description">Weather Images</string>
+    <string name="error_icon_description">Error icon</string>
+    <string name="home_screen">Home</string>
+    <string name="grant_permission">Grant permission</string>
+    <string name="open_app_settings">Open App Settings</string>
+    <string name="location_permission_required">Location Permission Required</string>
+    <string name="location_permission_permanent_decline_message">It seems you have permanently decline the location permission. No worries, you can go to app settings to grant it.</string>
+    <string name="location_permission_enquiry">To be able to view the latest weather information based on your location, you need to Allow the location\'s permission.</string>
+    <string name="coordinates_error">The location could not be found, due some technical issue. Please try again.</string>
 </resources>

@@ -4,44 +4,35 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
+import com.example.locationinducedweatherapp.data.model.ComposableFunctionAttributes
+import com.example.locationinducedweatherapp.ui.navigation.LocationInducedWeatherNavigationGraph
 import com.example.locationinducedweatherapp.ui.theme.LocationInducedWeatherAppTheme
+import com.example.locationinducedweatherapp.viewModel.LocationInducedViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    private lateinit var locationInducedViewModel: LocationInducedViewModel
+    private lateinit var navigationController: NavHostController
+    private val modifier: Modifier = Modifier
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             LocationInducedWeatherAppTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                locationInducedViewModel = hiltViewModel<LocationInducedViewModel>()
+                navigationController = rememberNavController()
+                val composableFunctionAttributes = ComposableFunctionAttributes(
+                    modifier = modifier,
+                    navigationController = navigationController
+                )
+                LocationInducedWeatherNavigationGraph(composableFunctionAttributes, locationInducedViewModel)
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    LocationInducedWeatherAppTheme {
-        Greeting("Android")
     }
 }

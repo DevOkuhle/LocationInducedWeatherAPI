@@ -1,32 +1,128 @@
 package com.example.locationinducedweatherapp.viewModel
 
+import android.Manifest
+import android.app.Application
+import android.os.Looper
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.compose.runtime.remember
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.locationinducedweatherapp.R
 import com.example.locationinducedweatherapp.data.api.APIResponseHandler
 import com.example.locationinducedweatherapp.data.model.request.LocationWeatherAttributesRequest
 import com.example.locationinducedweatherapp.data.model.response.current.LocationInducedCurrentWeatherResponse
+import com.example.locationinducedweatherapp.data.model.response.forecast.GridPoints
 import com.example.locationinducedweatherapp.data.model.response.forecast.LocationInducedForecastWeatherResponse
 import com.example.locationinducedweatherapp.repository.weather.LocationInducedWeatherRepository
+import com.example.locationinducedweatherapp.util.Constants
+import com.example.locationinducedweatherapp.util.Constants.Companion.SECOND
+import com.example.locationinducedweatherapp.util.Constants.Companion.UNIT_ONCE
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.LocationSettingsRequest
+import com.google.android.gms.location.Priority
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 import javax.inject.Inject
 
-class LocationInducedViewModel @Inject constructor(private val locationInducedWeatherRepository: LocationInducedWeatherRepository): ViewModel() {
+@HiltViewModel
+class LocationInducedViewModel @Inject constructor(private val locationInducedWeatherRepository: LocationInducedWeatherRepository, private val application: Application): ViewModel() {
 
     private val _currentLocationWeatherInformationMutableStateFlow = MutableStateFlow(LocationInducedCurrentWeatherResponse())
-    val weatherForecastByGridPointsMutableStateFlow = _currentLocationWeatherInformationMutableStateFlow.asStateFlow()
+    val currentLocationWeatherInformationMutableStateFlow = _currentLocationWeatherInformationMutableStateFlow.asStateFlow()
 
     private val _locationWeatherForecastMutableStateFlow = MutableStateFlow(LocationInducedForecastWeatherResponse())
-    val weatherForecastByGridPointsHourlyMutableStateFlow = _locationWeatherForecastMutableStateFlow.asStateFlow()
+    val locationWeatherForecastMutableStateFlow = _locationWeatherForecastMutableStateFlow.asStateFlow()
 
     private val _failureResponseMutableStateFlow = MutableStateFlow("")
     val failureResponseMutableStateFlow = _failureResponseMutableStateFlow.asStateFlow()
 
+    private var _locationRequested = MutableStateFlow(false)
+    val locationRequested = _locationRequested.asStateFlow()
+
+    private var _gpsUserEnabled = MutableStateFlow(false)
+    val gpsUserEnabled = _gpsUserEnabled
+
+    lateinit var permissionLauncher: ManagedActivityResultLauncher<String, Boolean>
     var isWeatherAPISuccessful: Boolean? = null
+    var locationInducedCurrentWeatherResponse: LocationInducedCurrentWeatherResponse = LocationInducedCurrentWeatherResponse()
+    var locationInducedForecastWeatherResponse: LocationInducedForecastWeatherResponse = LocationInducedForecastWeatherResponse()
+    var failureMessage: String = ""
+    var isPermanentlyDeclined: Boolean = false
+    lateinit var locationCoordinates: GridPoints
+    var previousDayOfTheWeek: String = ""
+    var sameDayTemperatureValues: MutableList<Double> = mutableListOf()
+    var averageForecastTemperatures: MutableList<String> = mutableListOf()
+    var forecastDays: MutableList<String> = mutableListOf()
+    var forecastIconResourceIdentifier: MutableList<Int> = mutableListOf()
+
+    val fusedLocationClient = LocationServices.getFusedLocationProviderClient(application.applicationContext)
+    val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, SECOND).setMaxUpdates(UNIT_ONCE).build()
+    val locationCallback =  object : LocationCallback() {
+        override fun onLocationResult(locationResult: LocationResult) {
+            val getLastLocation = locationResult.lastLocation
+            populateGridPointsAndInvokeOpenWeatherAPI(getLastLocation?.latitude, getLastLocation?.longitude, application.applicationContext.resources.getString(R.string.coordinates_error))
+            fusedLocationClient.removeLocationUpdates(this)
+            _locationRequested.update { true }
+        }
+    }
+
+
+    fun evaluateGPSLocationSuccess() {
+        val locationSettingsRequestBuilder = LocationSettingsRequest.Builder()
+            .addLocationRequest(locationRequest)
+            .setAlwaysShow(true)
+
+        val settingsClient = LocationServices.getSettingsClient(application)
+        val checkLocationSettings = settingsClient.checkLocationSettings(locationSettingsRequestBuilder.build())
+
+        checkLocationSettings.addOnSuccessListener {
+            _gpsUserEnabled.update { true }
+        }
+
+        checkLocationSettings.addOnFailureListener { exception ->
+            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+    fun populateGridPointsAndInvokeOpenWeatherAPI(latitude: Double?, longitude: Double?, coordinateDefaultError: String) {
+        if (latitude == null || longitude == null) {
+            _failureResponseMutableStateFlow.update { coordinateDefaultError }
+        } else {
+
+            val locationWeatherAttributesRequest = LocationWeatherAttributesRequest (
+                latitude = latitude,
+                longitude = longitude,
+                apiKey = Constants.OPEN_WEATHER_API_KEY
+            )
+            locationCoordinates = GridPoints(latitude, longitude)
+            getAllLocationBasedWeatherInformation(locationWeatherAttributesRequest)
+        }
+    }
+
+    fun getAllLocationBasedWeatherInformation(locationWeatherAttributesRequest: LocationWeatherAttributesRequest) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val weatherForecastResponse = async { getLocationWeatherForecast(locationWeatherAttributesRequest) }
+                val currentWeatherResponse = async { getCurrentWeatherInformation(locationWeatherAttributesRequest) }
+                weatherForecastResponse.await()
+                currentWeatherResponse.await()
+            } catch (e: Exception) {
+                _failureResponseMutableStateFlow.update { e.message ?: "" }
+            }
+        }
+    }
 
     fun getCurrentWeatherInformation(locationWeatherAttributesRequest: LocationWeatherAttributesRequest) {
         invokeAPICallsAndPopulateStateFlows(_currentLocationWeatherInformationMutableStateFlow) {
@@ -60,5 +156,25 @@ class LocationInducedViewModel @Inject constructor(private val locationInducedWe
                 }
             }
         }
+    }
+
+    fun convertTimestampIntoDayOfTheWeek(timeStamp: Int): String {
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = timeStamp.toLong() * 1000
+        }
+        val dayOfTheWeek = calendar.get(Calendar.DAY_OF_WEEK)
+        val calenderDayOfTheWeek = Calendar.getInstance().apply {
+            set(Calendar.DAY_OF_WEEK, dayOfTheWeek)
+        }
+        val sdf = SimpleDateFormat("EEEE", Locale.getDefault())
+        return sdf.format(calenderDayOfTheWeek.time)
+    }
+
+    fun <T> changeListIntoAString(inputList: List<T>): String {
+        var addValuesToString = ""
+        inputList.forEach { inputItems ->
+            addValuesToString += "$inputItems;"
+        }
+        return addValuesToString
     }
 }

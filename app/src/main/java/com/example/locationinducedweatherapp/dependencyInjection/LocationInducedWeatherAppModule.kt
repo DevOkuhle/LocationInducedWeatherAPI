@@ -1,7 +1,9 @@
 package com.example.locationinducedweatherapp.dependencyInjection
 
+import android.app.Application
+import androidx.room.Room
 import com.example.locationinducedweatherapp.data.api.APIConfigurations
-import com.example.locationinducedweatherapp.data.api.OpenWeatherAPI
+import com.example.locationinducedweatherapp.data.api.openWeather.OpenWeatherAPI
 import com.example.locationinducedweatherapp.util.Constants
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -17,6 +19,9 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 import javax.inject.Singleton
 import com.example.locationinducedweatherapp.repository.weather.LocationInducedWeatherRepository
 import com.example.locationinducedweatherapp.repository.weather.LocationInducedWeatherRepositoryImpl
+import com.example.locationinducedweatherapp.room.dao.LocationInducedWeatherDao
+import com.example.locationinducedweatherapp.room.database.LocationInducedWeatherAppDatabase
+import com.example.locationinducedweatherapp.util.Constants.Companion.LOCATION_INDUCED_WEATHER_APP_DATABASE
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -63,8 +68,21 @@ object LocationInducedWeatherAppModule {
     @Singleton
     fun providesAPIConfigurations(): APIConfigurations = APIConfigurations()
 
+    @Provides
+    @Singleton
+    fun providesCustomWeatherDatabase(appContext: Application): LocationInducedWeatherAppDatabase {
+        return  Room.databaseBuilder(
+            appContext.applicationContext,
+            LocationInducedWeatherAppDatabase::class.java,
+            LOCATION_INDUCED_WEATHER_APP_DATABASE
+        ).build()
+    }
+
+    @Provides
+    fun provideUserDao(locationInducedWeatherAppDatabase: LocationInducedWeatherAppDatabase): LocationInducedWeatherDao  = locationInducedWeatherAppDatabase.locationInducedWeatherDao()
+
     @OptIn(ExperimentalSerializationApi::class)
     @Provides
     @Singleton
-    fun providesLocationInducedWeatherRepository(openWeatherAPI: OpenWeatherAPI, apiConfigurations: APIConfigurations): LocationInducedWeatherRepository = LocationInducedWeatherRepositoryImpl(openWeatherAPI, apiConfigurations)
+    fun providesLocationInducedWeatherRepository(openWeatherAPI: OpenWeatherAPI, apiConfigurations: APIConfigurations, locationInducedWeatherDao: LocationInducedWeatherDao): LocationInducedWeatherRepository = LocationInducedWeatherRepositoryImpl(openWeatherAPI, apiConfigurations, locationInducedWeatherDao)
 }

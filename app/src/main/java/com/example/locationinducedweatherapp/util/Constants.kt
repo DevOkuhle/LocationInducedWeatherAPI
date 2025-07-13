@@ -13,6 +13,7 @@ Constants {
         const val SECOND = 1000L
         const val UNIT_ONCE = 1
         const val ANDROID_PACKAGE = "Package"
-        const val LOCATION_INDUCED_WEATHER_FAILURE = "LocationInducedWeatherFailureScreen"
+        const val LOCATION_INDUCED_WEATHER_FAILURE_SCREEN = "LocationInducedWeatherFailureScreen"
+        const val VIEW_FAVOURITE_LOCATION_PROFILES_SCREEN = "ViewFavouriteLocationProfilesScreen"
     }
 }

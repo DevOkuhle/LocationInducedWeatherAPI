@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -29,7 +30,8 @@ fun LocationInducedWeatherFailure(composableFunctionAttributes: ComposableFuncti
             .verticalScroll(rememberScrollState())
     ) {
         Icon(
-            modifier = modifier.padding(dimensionResource(R.dimen.dimension_30dp)),
+            modifier = modifier.size(dimensionResource(R.dimen.dimension_80dp))
+                .padding(dimensionResource(R.dimen.dimension_30dp)),
             painter = painterResource(R.drawable.error_icon),
             contentDescription = stringResource(id = R.string.error_icon_description)
         )
@@ -40,7 +42,7 @@ fun LocationInducedWeatherFailure(composableFunctionAttributes: ComposableFuncti
             style = MaterialTheme.typography.titleLarge
         )
 
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = modifier.fillMaxSize()) {
             Button(
                 onClick = { navigationController.navigate(route = LocationInducedWeatherNavigationScreen.LocationInducedWeatherReportScreen.route) },
                 modifier = Modifier

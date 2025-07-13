@@ -1,6 +1,7 @@
 package com.example.locationinducedweatherapp.ui
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -59,7 +60,7 @@ import com.example.locationinducedweatherapp.util.Constants.Companion.DEGREE_CHA
 import com.example.locationinducedweatherapp.util.DisplayCircularProgressIndicator
 import kotlin.String
 
-
+@SuppressLint("ConfigurationScreenWidthHeight")
 @Composable
 fun LocationInducedWeatherReport(composableFunctionAttributes: ComposableFunctionAttributes, locationInducedViewModel: LocationInducedViewModel) = with(composableFunctionAttributes) {
     var loading by rememberSaveable { mutableStateOf(true) }
@@ -78,61 +79,70 @@ fun LocationInducedWeatherReport(composableFunctionAttributes: ComposableFunctio
         setSaveAbleStateFlowToTrue = { showLocationPermissionDescriptionDialog = true }
     )
     val permission = Manifest.permission.ACCESS_FINE_LOCATION
+    val shouldShowWeatherForecastForFavouriteLocation = locationInducedViewModel.showWeatherForecastForFavouriteLocation.collectAsState().value
+    val shouldDismissAlertDialog = locationInducedViewModel.shouldDismissAlertDialog.collectAsState().value
+    val locationRequested = locationInducedViewModel.locationRequested.collectAsState().value
+    when {
+        shouldDismissAlertDialog -> {
+            locationInducedViewModel.shouldDismissAlertDialog(false)
+            loading = false
+        }
 
-    Column(
-        modifier = modifier.fillMaxSize()
-            .verticalScroll(rememberScrollState())
-    ) {
-        when {
-            loading && !locationPermissionGranted -> {
-                DisplayCircularProgressIndicator(modifier)
-                RequestLocationPermissionAndPopulateStateFlow(locationInducedViewModel, rememberSaveAblePassObjectForLoading, rememberSaveAblePassObjectForDialog) { locationPermissionGranted = true }
-            }
+        loading && !locationPermissionGranted && !shouldShowWeatherForecastForFavouriteLocation -> {
+            DisplayCircularProgressIndicator(modifier = modifier.fillMaxWidth())
+            RequestLocationPermissionAndPopulateStateFlow(locationInducedViewModel, rememberSaveAblePassObjectForLoading, rememberSaveAblePassObjectForDialog) { locationPermissionGranted = true }
+        }
 
-            loading && !locationInducedViewModel.locationRequested.collectAsState().value -> {
-                DisplayCircularProgressIndicator(modifier)
-                if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
-                    locationInducedViewModel.evaluateGPSLocationSuccess()
-                    if (locationInducedViewModel.gpsUserEnabled.collectAsState().value){
-                        LaunchedEffect(Unit) {
-                            locationInducedViewModel.fusedLocationClient.requestLocationUpdates(locationInducedViewModel.locationRequest, locationInducedViewModel.locationCallback, Looper.getMainLooper())
-                        }
+        loading && !locationRequested && !shouldShowWeatherForecastForFavouriteLocation -> {
+            DisplayCircularProgressIndicator(modifier = modifier.fillMaxWidth())
+            if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
+                locationInducedViewModel.evaluateGPSLocationSuccess()
+                if (locationInducedViewModel.gpsUserEnabled.collectAsState().value){
+                    LaunchedEffect(Unit) {
+                        locationInducedViewModel.fusedLocationClient.requestLocationUpdates(locationInducedViewModel.locationRequest, locationInducedViewModel.locationCallback, Looper.getMainLooper())
                     }
                 }
             }
+        }
 
-            loading && locationInducedViewModel.locationRequested.collectAsState().value -> {
-                locationInducedViewModel.locationInducedCurrentWeatherResponse = locationInducedViewModel.currentLocationWeatherInformationMutableStateFlow.collectAsState().value
-                locationInducedViewModel.locationInducedForecastWeatherResponse = locationInducedViewModel.locationWeatherForecastMutableStateFlow.collectAsState().value
-                locationInducedViewModel.failureMessage = locationInducedViewModel.failureResponseMutableStateFlow.collectAsState().value
-                if (locationInducedViewModel.isWeatherAPISuccessful == true && locationInducedViewModel.locationInducedCurrentWeatherResponse.weatherDescription.isNotEmpty() && locationInducedViewModel.locationInducedForecastWeatherResponse.periodWeatherConditions.isNotEmpty()) {
-                    loading = false
-                } else if (locationInducedViewModel.failureMessage.isNotEmpty()) {
-                    navigationController.navigate(LocationInducedWeatherNavigationScreen.LocationInducedWeatherFailureScreen.route)
-                }
+        loading &&  (shouldShowWeatherForecastForFavouriteLocation || locationInducedViewModel.locationRequested.collectAsState().value) -> {
+            DisplayCircularProgressIndicator(modifier = Modifier.fillMaxWidth())
+            locationInducedViewModel.locationInducedCurrentWeatherResponse = locationInducedViewModel.currentLocationWeatherInformationMutableStateFlow.collectAsState().value
+            locationInducedViewModel.locationInducedForecastWeatherResponse = locationInducedViewModel.locationWeatherForecastMutableStateFlow.collectAsState().value
+            locationInducedViewModel.failureMessage = locationInducedViewModel.failureResponseMutableStateFlow.collectAsState().value
+            if (locationInducedViewModel.isWeatherAPISuccessful == true && locationInducedViewModel.checkIfMutableStateIsNotCached()) {
+                locationInducedViewModel.showWeatherForecastForFavouriteLocation(false)
+                loading = false
+            } else if (locationInducedViewModel.failureMessage.isNotEmpty()) {
+                navigationController.navigate(LocationInducedWeatherNavigationScreen.LocationInducedWeatherFailureScreen.route)
             }
+        }
 
-            showLocationPermissionDescriptionDialog -> {
-                LocationPermissionDescriptionDialog(
-                    isPermanentlyDeclined = locationInducedViewModel.isPermanentlyDeclined,
-                    onDismissed = { showLocationPermissionDescriptionDialog = false },
-                    onAcceptButton = {
-                        showLocationPermissionDescriptionDialog = false
-                        locationInducedViewModel.permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-                    },
-                    onGoToAppSetting = {
-                        localActivity?.let { activity ->
-                            val settingsIntent = Intent(
-                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                Uri.fromParts(ANDROID_PACKAGE, localActivity.packageName, null)
-                            )
-                            activity.startActivity(settingsIntent)
-                        }
+        showLocationPermissionDescriptionDialog -> {
+            LocationPermissionDescriptionDialog(
+                isPermanentlyDeclined = locationInducedViewModel.isPermanentlyDeclined,
+                onDismissed = { showLocationPermissionDescriptionDialog = false },
+                onAcceptButton = {
+                    showLocationPermissionDescriptionDialog = false
+                    locationInducedViewModel.permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                },
+                onGoToAppSetting = {
+                    localActivity?.let { activity ->
+                        val settingsIntent = Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.fromParts(ANDROID_PACKAGE, localActivity.packageName, null)
+                        )
+                        activity.startActivity(settingsIntent)
                     }
-                )
-            }
+                }
+            )
+        }
 
-            else -> {
+        else -> {
+            Column(
+                modifier = modifier.fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+            ) {
                 val locationInducedCurrentWeatherResponse = locationInducedViewModel.locationInducedCurrentWeatherResponse
                 val locationInducedForecastWeatherResponse = locationInducedViewModel.locationInducedForecastWeatherResponse
                 val currentWeatherMappedAttributes = mapCurrentWeatherToResources(locationInducedCurrentWeatherResponse.weatherDescription.first().main)
@@ -141,6 +151,20 @@ fun LocationInducedWeatherReport(composableFunctionAttributes: ComposableFunctio
                         .fillMaxSize()
                         .background(colorResource(currentWeatherMappedAttributes.backgroundColorResource))
                 ) {
+                    Image(
+                        modifier = modifier.fillMaxSize(),
+                        painter = painterResource(currentWeatherMappedAttributes.imageResource),
+                        contentDescription = stringResource(R.string.image_description),
+                        contentScale = ContentScale.Fit
+                    )
+
+                    if (locationInducedViewModel.shouldAddEntityEntry.collectAsState().value) {
+                        AddAProfileForSavedFavouriteLocation(locationInducedViewModel)
+                    } else {
+                        Column(modifier = modifier.align(Alignment.TopStart)) {
+                            LocationInducedWeatherMenuItem(composableFunctionAttributes, locationInducedViewModel)
+                        }
+                    }
                     UpperScreenUISetup(modifier, currentWeatherMappedAttributes, locationInducedCurrentWeatherResponse)
                 }
                 Column(
@@ -152,6 +176,8 @@ fun LocationInducedWeatherReport(composableFunctionAttributes: ComposableFunctio
                     FormatingOfAveragesAndDisplaying(modifier, locationInducedViewModel, locationInducedForecastWeatherResponse.periodWeatherConditions)
                 }
             }
+            locationInducedViewModel.previousUserCoordinates = locationInducedViewModel.currentUserCoordinates
+            locationInducedViewModel.previousLocationInducedCurrentWeatherResponse = locationInducedViewModel.locationInducedCurrentWeatherResponse
         }
     }
 }
@@ -221,14 +247,8 @@ fun LowerScreenSetUp(modifier: Modifier, locationInducedCurrentWeatherResponse: 
 
 @Composable
 fun UpperScreenUISetup(modifier: Modifier, currentWeatherMappedAttributes: CurrentWeatherMappedAttributes, locationInducedCurrentWeatherResponse: LocationInducedCurrentWeatherResponse) {
-    Image(
-        modifier = modifier.fillMaxSize(),
-        painter = painterResource(currentWeatherMappedAttributes.imageResource),
-        contentDescription = stringResource(R.string.image_description),
-        contentScale = ContentScale.Fit
-    )
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally

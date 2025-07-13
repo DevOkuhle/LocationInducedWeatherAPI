@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">LocationInducedWeatherApp</string>
+    <string name="favourite_location">Favourite Locations</string>
     <string name="add_favourite_location">Add location to Favourites</string>
     <string name="view_favourites">Favourites</string>
     <string name="min_temperature">min</string>
@@ -8,6 +9,10 @@
     <string name="image_description">Weather Images</string>
     <string name="error_icon_description">Error icon</string>
     <string name="home_screen">Home</string>
+    <string name="ok_button">OK</string>
+    <string name="favouriteName">Enter Favourite Name</string>
+    <string name="user_input_message">Add Favourite Name</string>
+    <string name="location_already_exists">Location already exists in as your favourite</string>
     <string name="grant_permission">Grant permission</string>
     <string name="open_app_settings">Open App Settings</string>
     <string name="location_permission_required">Location Permission Required</string>

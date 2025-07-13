@@ -2,18 +2,20 @@ package com.example.locationinducedweatherapp.viewModel
 
 import android.Manifest
 import android.app.Application
-import android.os.Looper
 import androidx.activity.compose.ManagedActivityResultLauncher
-import androidx.compose.runtime.remember
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.locationinducedweatherapp.R
 import com.example.locationinducedweatherapp.data.api.APIResponseHandler
+import com.example.locationinducedweatherapp.data.model.ComposableFunctionAttributes
 import com.example.locationinducedweatherapp.data.model.request.LocationWeatherAttributesRequest
 import com.example.locationinducedweatherapp.data.model.response.current.LocationInducedCurrentWeatherResponse
 import com.example.locationinducedweatherapp.data.model.response.forecast.GridPoints
 import com.example.locationinducedweatherapp.data.model.response.forecast.LocationInducedForecastWeatherResponse
 import com.example.locationinducedweatherapp.repository.weather.LocationInducedWeatherRepository
+import com.example.locationinducedweatherapp.room.entitties.SavedFavourites
+import com.example.locationinducedweatherapp.room.entitties.UserFavouriteLocationProfiles
+import com.example.locationinducedweatherapp.ui.navigation.LocationInducedWeatherNavigationScreen
 import com.example.locationinducedweatherapp.util.Constants
 import com.example.locationinducedweatherapp.util.Constants.Companion.SECOND
 import com.example.locationinducedweatherapp.util.Constants.Companion.UNIT_ONCE
@@ -49,11 +51,29 @@ class LocationInducedViewModel @Inject constructor(private val locationInducedWe
     private val _failureResponseMutableStateFlow = MutableStateFlow("")
     val failureResponseMutableStateFlow = _failureResponseMutableStateFlow.asStateFlow()
 
+    private var _readUserFavouriteLocationProfiles = MutableStateFlow(emptyList<UserFavouriteLocationProfiles>())
+    val readUserFavouriteLocationProfiles = _readUserFavouriteLocationProfiles.asStateFlow()
+
+    private var _doesLocationAlreadyExist = MutableStateFlow(false)
+    var doesLocationAlreadyExist = _doesLocationAlreadyExist.asStateFlow()
+
     private var _locationRequested = MutableStateFlow(false)
     val locationRequested = _locationRequested.asStateFlow()
 
     private var _gpsUserEnabled = MutableStateFlow(false)
     val gpsUserEnabled = _gpsUserEnabled
+
+    private var _shouldDismissAlertDialog = MutableStateFlow(false)
+    val shouldDismissAlertDialog = _shouldDismissAlertDialog.asStateFlow()
+
+    private var _shouldAddEntityEntry = MutableStateFlow(false)
+    var shouldAddEntityEntry = _shouldAddEntityEntry.asStateFlow()
+
+    private var _shouldShowMenuItems = MutableStateFlow(false)
+    var shouldShowMenuItems = _shouldShowMenuItems.asStateFlow()
+
+    private var _showWeatherForecastForFavouriteLocation = MutableStateFlow(false)
+    var showWeatherForecastForFavouriteLocation = _showWeatherForecastForFavouriteLocation.asStateFlow()
 
     lateinit var permissionLauncher: ManagedActivityResultLauncher<String, Boolean>
     var isWeatherAPISuccessful: Boolean? = null
@@ -67,6 +87,13 @@ class LocationInducedViewModel @Inject constructor(private val locationInducedWe
     var averageForecastTemperatures: MutableList<String> = mutableListOf()
     var forecastDays: MutableList<String> = mutableListOf()
     var forecastIconResourceIdentifier: MutableList<Int> = mutableListOf()
+    var userGivenNameFavouriteLocation: String? = null
+    var userFavouriteLocationProfiles: List<UserFavouriteLocationProfiles> = emptyList()
+    var selectedFavouriteLocationProfileIndex: Int = -1
+    var currentUserCoordinates: String = ""
+    var previousUserCoordinates: String = ""
+    var previousLocationInducedCurrentWeatherResponse: LocationInducedCurrentWeatherResponse = LocationInducedCurrentWeatherResponse()
+
 
     val fusedLocationClient = LocationServices.getFusedLocationProviderClient(application.applicationContext)
     val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, SECOND).setMaxUpdates(UNIT_ONCE).build()
@@ -74,6 +101,7 @@ class LocationInducedViewModel @Inject constructor(private val locationInducedWe
         override fun onLocationResult(locationResult: LocationResult) {
             val getLastLocation = locationResult.lastLocation
             populateGridPointsAndInvokeOpenWeatherAPI(getLastLocation?.latitude, getLastLocation?.longitude, application.applicationContext.resources.getString(R.string.coordinates_error))
+            currentUserCoordinates = "${getLastLocation?.latitude};${getLastLocation?.longitude}"
             fusedLocationClient.removeLocationUpdates(this)
             _locationRequested.update { true }
         }
@@ -158,6 +186,50 @@ class LocationInducedViewModel @Inject constructor(private val locationInducedWe
         }
     }
 
+    fun addUserFavouriteLocations(savedFavourites: SavedFavourites) {
+        viewModelScope.launch {
+            locationInducedWeatherRepository.addUserFavouriteLocations(savedFavourites)
+        }
+    }
+
+    fun readUserFavouriteLocations(): Flow<List<SavedFavourites>> = locationInducedWeatherRepository.readUserFavouriteLocations()
+
+    fun addUserFavouriteLocationProfiles(getUserFavouriteLocationProfiles: UserFavouriteLocationProfiles) {
+        viewModelScope.launch {
+            locationInducedWeatherRepository.addUserFavouriteLocationProfiles(getUserFavouriteLocationProfiles)
+        }
+    }
+
+    fun readUserFavouriteLocationProfiles() {
+        viewModelScope.launch {
+            locationInducedWeatherRepository.readUserFavouriteLocationProfiles().collectLatest { favouriteProfile ->
+                    _readUserFavouriteLocationProfiles.update { favouriteProfile }
+            }
+        }
+    }
+
+    fun doesLocationAlreadyExist(locationGridPoint: String) =
+        viewModelScope.launch {
+            locationInducedWeatherRepository.doesLocationAlreadyExist(locationGridPoint).collectLatest { doesLocationAlreadyExist ->
+                _doesLocationAlreadyExist.update { doesLocationAlreadyExist }
+            }
+        }
+
+    fun shouldDismissAlertDialog(shouldDismissAlertDialog: Boolean) {
+        _shouldDismissAlertDialog.update { shouldDismissAlertDialog }
+    }
+
+    fun setShouldAddEntityEntry(shouldAddEntityEntry: Boolean) {
+        _shouldAddEntityEntry.update { shouldAddEntityEntry }
+    }
+
+    fun shouldShowMenuItems(shouldShowMenuItems: Boolean) {
+        _shouldShowMenuItems.update { shouldShowMenuItems }
+    }
+    fun showWeatherForecastForFavouriteLocation(showWeatherForecastForFavouriteLocation: Boolean) {
+        _showWeatherForecastForFavouriteLocation.update { showWeatherForecastForFavouriteLocation }
+    }
+
     fun convertTimestampIntoDayOfTheWeek(timeStamp: Int): String {
         val calendar = Calendar.getInstance().apply {
             timeInMillis = timeStamp.toLong() * 1000
@@ -172,9 +244,52 @@ class LocationInducedViewModel @Inject constructor(private val locationInducedWe
 
     fun <T> changeListIntoAString(inputList: List<T>): String {
         var addValuesToString = ""
-        inputList.forEach { inputItems ->
-            addValuesToString += "$inputItems;"
+        inputList.forEach { inputItem ->
+            addValuesToString += if (inputList.last() == inputItem) {
+                "$inputItem"
+            } else {
+                "$inputItem;"
+            }
         }
         return addValuesToString
     }
+
+    fun profileSelectedClickAction(composableFunctionAttributes: ComposableFunctionAttributes) {
+        var selectedFavouriteLocationProfile = userFavouriteLocationProfiles[selectedFavouriteLocationProfileIndex].coordinates.split(";")
+        val locationWeatherAttributesRequest = LocationWeatherAttributesRequest(
+            latitude = selectedFavouriteLocationProfile.first().trim().toDouble(),
+            longitude = selectedFavouriteLocationProfile.last().trim().toDouble(),
+            apiKey = Constants.OPEN_WEATHER_API_KEY
+        )
+        currentUserCoordinates = "${locationWeatherAttributesRequest.latitude},${locationWeatherAttributesRequest.longitude}"
+        getAllLocationBasedWeatherInformation(locationWeatherAttributesRequest)
+        composableFunctionAttributes.navigationController.navigate(route = LocationInducedWeatherNavigationScreen.LocationInducedWeatherReportScreen.route)
+    }
+
+    fun recordLocationAsFavourite(locationGridPoints: String) {
+        val savedFavourites = SavedFavourites(
+            favouriteLocationName = userGivenNameFavouriteLocation ?: "",
+            currentWeatherType = locationInducedCurrentWeatherResponse.weatherDescription.first().main,
+            currentMinimumTemperature = locationInducedCurrentWeatherResponse.weatherConditionsNumericalSummary.minimumTemperature,
+            currentMaximumTemperature = locationInducedCurrentWeatherResponse.weatherConditionsNumericalSummary.maximumTemperature,
+            currentTemperature = locationInducedCurrentWeatherResponse.weatherConditionsNumericalSummary.temperature,
+            averageTemperatures = changeListIntoAString(averageForecastTemperatures.takeLast(5)),
+            forecastDays = changeListIntoAString(forecastDays.takeLast(5)),
+            iconResourceIdentifiers = changeListIntoAString(forecastIconResourceIdentifier.takeLast(5)),
+            locationGridPoint = locationGridPoints,
+            cityName = locationInducedForecastWeatherResponse.locationCityDetails.cityName,
+            country = locationInducedForecastWeatherResponse.locationCityDetails.country
+        )
+        val userFavouriteLocationProfiles = UserFavouriteLocationProfiles(
+            cityName = locationInducedCurrentWeatherResponse.name,
+            country = locationInducedCurrentWeatherResponse.locationCityDetails.country,
+            coordinates = locationGridPoints,
+            userGiveName = userGivenNameFavouriteLocation ?: ""
+        )
+        addUserFavouriteLocations(savedFavourites)
+        addUserFavouriteLocationProfiles(userFavouriteLocationProfiles)
+        userGivenNameFavouriteLocation = null
+    }
+
+    fun checkIfMutableStateIsNotCached(): Boolean = locationInducedCurrentWeatherResponse.weatherDescription.isNotEmpty() && locationInducedForecastWeatherResponse.periodWeatherConditions.isNotEmpty()
 }

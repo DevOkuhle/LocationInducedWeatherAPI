@@ -7,7 +7,7 @@ import com.example.locationinducedweatherapp.data.model.request.LocationWeatherA
 import com.example.locationinducedweatherapp.data.model.response.current.LocationInducedCurrentWeatherResponse
 import com.example.locationinducedweatherapp.room.dao.LocationInducedWeatherDao
 import com.example.locationinducedweatherapp.data.model.response.forecast.LocationInducedForecastWeatherResponse
-import com.example.locationinducedweatherapp.room.entitties.SavedFavourites
+import com.example.locationinducedweatherapp.room.entitties.SavedLocationWeatherForecast
 import com.example.locationinducedweatherapp.room.entitties.UserFavouriteLocationProfiles
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -38,13 +38,10 @@ class LocationInducedWeatherRepositoryImpl @Inject constructor(private val openW
             }
         }
 
-    override suspend fun addUserFavouriteLocations(savedFavourites: SavedFavourites) =
-        locationInducedWeatherDao.addUserFavouriteLocations(savedFavourites)
+    override suspend fun addUserPreviousLocationsInducedWeather(savedLocationWeatherForecast: SavedLocationWeatherForecast) =
+        locationInducedWeatherDao.addUserLocationsInducedWeather(savedLocationWeatherForecast)
 
-    override fun readUserFavouriteLocations(): Flow<List<SavedFavourites>> = locationInducedWeatherDao.readUserFavouriteLocations()
-
-    override fun getUserFavouriteLocationsByCoordinates(locationGridPoint: String): Flow<List<SavedFavourites>> =
-        locationInducedWeatherDao.getUserFavouriteLocationsByCoordinates(locationGridPoint)
+    override fun readUserPreviousLocationsInducedWeather(): Flow<List<SavedLocationWeatherForecast>> = locationInducedWeatherDao.readUserLocationsInducedWeather()
 
     override suspend fun addUserFavouriteLocationProfiles(getUserFavouriteLocationProfiles: UserFavouriteLocationProfiles) =
         withContext(Dispatchers.IO) {
@@ -54,8 +51,8 @@ class LocationInducedWeatherRepositoryImpl @Inject constructor(private val openW
     override fun readUserFavouriteLocationProfiles(): Flow<List<UserFavouriteLocationProfiles>> =
         locationInducedWeatherDao.readUserFavouriteLocationProfiles()
 
-    override fun getUserFavouriteLocationProfilesByCoordinates(locationGridPoint: String): Flow<UserFavouriteLocationProfiles> =
-        locationInducedWeatherDao.getUserFavouriteLocationProfilesByCoordinates(locationGridPoint)
+    override fun getUserLocationsInducedWeatherByCoordinates(locationGridPoint: String): Flow<List<SavedLocationWeatherForecast>> =
+        locationInducedWeatherDao.getUserLocationsInducedWeatherByCoordinates(locationGridPoint)
 
     override fun doesLocationAlreadyExist(locationGridPoint: String): Flow<Boolean> =
         locationInducedWeatherDao.doesLocationAlreadyExist(locationGridPoint)

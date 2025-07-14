@@ -4,7 +4,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 @Entity(tableName = "save_location_forecast")
-data class SavedFavourites (
+data class SavedLocationWeatherForecast (
     @PrimaryKey(autoGenerate = true) var identifier: Int = 0,
     var favouriteLocationName: String = "",
     var currentWeatherType: String = "",
@@ -16,5 +16,6 @@ data class SavedFavourites (
     var iconResourceIdentifiers: String = "",
     var locationGridPoint: String = "",
     var cityName: String = "",
-    var country: String = ""
+    var country: String = "",
+    var weatherForecastTimeStamp: String = ""
 )

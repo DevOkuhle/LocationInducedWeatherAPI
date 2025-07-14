@@ -6,11 +6,11 @@ import com.squareup.moshi.JsonClass
 @JsonClass(generateAdapter = true)
 data class Weather(
     @Json(name = "description")
-    var description: String,
+    var description: String = "",
     @Json(name = "icon")
-    var icon: String,
+    var icon: String = "",
     @Json(name = "id")
-    var identifier: Int,
+    var identifier: Int = -1,
     @Json(name = "main")
-    var main: String
+    var main: String = ""
 )

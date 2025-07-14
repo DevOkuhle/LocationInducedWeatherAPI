@@ -70,8 +70,8 @@ fun ViewFavouriteLocationProfiles(composableFunctionAttributes: ComposableFuncti
                             )
                             Text(
                                 modifier = modifier.padding(dimensionResource(R.dimen.dimension_8dp)),
-                                text = "${userFavouriteLocationProfile.country}, ${userFavouriteLocationProfile.cityName}",
-                                style = MaterialTheme.typography.displayMedium
+                                text = "${userFavouriteLocationProfile.cityName}, ${userFavouriteLocationProfile.country}",
+                                style = MaterialTheme.typography.displaySmall
                             )
                             Box(
                                 modifier = modifier.fillMaxWidth()

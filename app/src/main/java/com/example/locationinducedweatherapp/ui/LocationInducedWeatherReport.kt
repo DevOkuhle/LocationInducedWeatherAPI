@@ -54,7 +54,6 @@ import com.example.locationinducedweatherapp.data.model.CurrentWeatherMappedAttr
 import com.example.locationinducedweatherapp.data.model.RememberSaveAblePassObject
 import com.example.locationinducedweatherapp.data.model.response.current.LocationInducedCurrentWeatherResponse
 import com.example.locationinducedweatherapp.data.model.response.forecast.PeriodWeatherConditions
-import com.example.locationinducedweatherapp.ui.navigation.LocationInducedWeatherNavigationScreen
 import com.example.locationinducedweatherapp.util.Constants.Companion.ANDROID_PACKAGE
 import com.example.locationinducedweatherapp.util.Constants.Companion.DEGREE_CHARACTER
 import com.example.locationinducedweatherapp.util.DisplayCircularProgressIndicator
@@ -82,7 +81,14 @@ fun LocationInducedWeatherReport(composableFunctionAttributes: ComposableFunctio
     val shouldShowWeatherForecastForFavouriteLocation = locationInducedViewModel.showWeatherForecastForFavouriteLocation.collectAsState().value
     val shouldDismissAlertDialog = locationInducedViewModel.shouldDismissAlertDialog.collectAsState().value
     val locationRequested = locationInducedViewModel.locationRequested.collectAsState().value
+    val userLocationsInducedWeather = locationInducedViewModel.userLocationsInducedWeather.collectAsState().value
+
     when {
+        userLocationsInducedWeather.isNotEmpty() -> {
+            locationInducedViewModel.setUpLocationInducedWeatherResponse(userLocationsInducedWeather)
+            locationInducedViewModel.setUserLocationsInducedWeather(emptyList())
+            loading = false
+        }
         shouldDismissAlertDialog -> {
             locationInducedViewModel.shouldDismissAlertDialog(false)
             loading = false
@@ -109,13 +115,9 @@ fun LocationInducedWeatherReport(composableFunctionAttributes: ComposableFunctio
             DisplayCircularProgressIndicator(modifier = Modifier.fillMaxWidth())
             locationInducedViewModel.locationInducedCurrentWeatherResponse = locationInducedViewModel.currentLocationWeatherInformationMutableStateFlow.collectAsState().value
             locationInducedViewModel.locationInducedForecastWeatherResponse = locationInducedViewModel.locationWeatherForecastMutableStateFlow.collectAsState().value
-            locationInducedViewModel.failureMessage = locationInducedViewModel.failureResponseMutableStateFlow.collectAsState().value
-            if (locationInducedViewModel.isWeatherAPISuccessful == true && locationInducedViewModel.checkIfMutableStateIsNotCached()) {
-                locationInducedViewModel.showWeatherForecastForFavouriteLocation(false)
-                loading = false
-            } else if (locationInducedViewModel.failureMessage.isNotEmpty()) {
-                navigationController.navigate(LocationInducedWeatherNavigationScreen.LocationInducedWeatherFailureScreen.route)
-            }
+            locationInducedViewModel.failureResponse = locationInducedViewModel.failureResponseMutableStateFlow.collectAsState().value
+            locationInducedViewModel.performResponseHandling(composableFunctionAttributes) { loading = false }
+            locationInducedViewModel.selectedFavouriteLocationProfileIndex = -1
         }
 
         showLocationPermissionDescriptionDialog -> {
@@ -128,10 +130,7 @@ fun LocationInducedWeatherReport(composableFunctionAttributes: ComposableFunctio
                 },
                 onGoToAppSetting = {
                     localActivity?.let { activity ->
-                        val settingsIntent = Intent(
-                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                            Uri.fromParts(ANDROID_PACKAGE, localActivity.packageName, null)
-                        )
+                        val settingsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts(ANDROID_PACKAGE, localActivity.packageName, null))
                         activity.startActivity(settingsIntent)
                     }
                 }
@@ -139,78 +138,92 @@ fun LocationInducedWeatherReport(composableFunctionAttributes: ComposableFunctio
         }
 
         else -> {
-            Column(
-                modifier = modifier.fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-            ) {
-                val locationInducedCurrentWeatherResponse = locationInducedViewModel.locationInducedCurrentWeatherResponse
-                val locationInducedForecastWeatherResponse = locationInducedViewModel.locationInducedForecastWeatherResponse
-                val currentWeatherMappedAttributes = mapCurrentWeatherToResources(locationInducedCurrentWeatherResponse.weatherDescription.first().main)
-                Box(
-                    modifier = modifier.weight(2f)
-                        .fillMaxSize()
-                        .background(colorResource(currentWeatherMappedAttributes.backgroundColorResource))
-                ) {
-                    Image(
-                        modifier = modifier.fillMaxSize(),
-                        painter = painterResource(currentWeatherMappedAttributes.imageResource),
-                        contentDescription = stringResource(R.string.image_description),
-                        contentScale = ContentScale.Fit
-                    )
-
-                    if (locationInducedViewModel.shouldAddEntityEntry.collectAsState().value) {
-                        AddAProfileForSavedFavouriteLocation(locationInducedViewModel)
-                    } else {
-                        Column(modifier = modifier.align(Alignment.TopStart)) {
-                            LocationInducedWeatherMenuItem(composableFunctionAttributes, locationInducedViewModel)
-                        }
-                    }
-                    UpperScreenUISetup(modifier, currentWeatherMappedAttributes, locationInducedCurrentWeatherResponse)
-                }
-                Column(
-                    modifier = modifier.weight(3f)
-                        .fillMaxSize()
-                        .background(colorResource(currentWeatherMappedAttributes.backgroundColorResource))
-                ) {
-                    LowerScreenSetUp(modifier, locationInducedCurrentWeatherResponse)
-                    FormatingOfAveragesAndDisplaying(modifier, locationInducedViewModel, locationInducedForecastWeatherResponse.periodWeatherConditions)
-                }
-            }
-            locationInducedViewModel.previousUserCoordinates = locationInducedViewModel.currentUserCoordinates
-            locationInducedViewModel.previousLocationInducedCurrentWeatherResponse = locationInducedViewModel.locationInducedCurrentWeatherResponse
+            ViewLocationInducedWeatherResults(composableFunctionAttributes, locationInducedViewModel)
         }
     }
 }
 
 @Composable
+fun ViewLocationInducedWeatherResults(composableFunctionAttributes: ComposableFunctionAttributes, locationInducedViewModel: LocationInducedViewModel) = with(composableFunctionAttributes) {
+    Column(
+        modifier = modifier.fillMaxSize()
+            .verticalScroll(rememberScrollState())
+    ) {
+        val locationInducedCurrentWeatherResponse = locationInducedViewModel.locationInducedCurrentWeatherResponse
+        val currentWeatherMappedAttributes = mapCurrentWeatherToResources(locationInducedCurrentWeatherResponse.weatherDescription.first().main)
+        Box(
+            modifier = modifier.weight(1f)
+                .fillMaxSize()
+                .background(colorResource(currentWeatherMappedAttributes.backgroundColorResource))
+        ) {
+            Image(
+                modifier = modifier.fillMaxSize(),
+                painter = painterResource(currentWeatherMappedAttributes.imageResource),
+                contentDescription = stringResource(R.string.image_description),
+                contentScale = ContentScale.Fit
+            )
+
+            if (locationInducedViewModel.shouldAddEntityEntry.collectAsState().value) {
+                AddAProfileForSavedFavouriteLocation(locationInducedViewModel)
+            } else {
+                Column(modifier = modifier.align(Alignment.TopStart)) {
+                    LocationInducedWeatherMenuItem(composableFunctionAttributes, locationInducedViewModel)
+                }
+            }
+            UpperScreenUISetup(modifier, currentWeatherMappedAttributes, locationInducedCurrentWeatherResponse)
+        }
+        Column(
+            modifier = modifier.weight(1f)
+                .fillMaxSize()
+                .background(colorResource(currentWeatherMappedAttributes.backgroundColorResource))
+        ) {
+            LowerScreenSetUp(modifier, locationInducedCurrentWeatherResponse)
+            PassDataDifferentlyWhenTriggeredFroFavourites(locationInducedViewModel, composableFunctionAttributes)
+        }
+    }
+}
+
+@Composable
+fun PassDataDifferentlyWhenTriggeredFroFavourites(locationInducedViewModel: LocationInducedViewModel, composableFunctionAttributes: ComposableFunctionAttributes) = with(locationInducedViewModel) {
+    if (daysForecastRowItems.isNotEmpty()) {
+        daysForecastRowItems.forEach { daysForecastRowItems ->
+            WeatherForecastRowItem(composableFunctionAttributes.modifier, daysForecastRowItems)
+        }
+        daysForecastRowItems.clear()
+    } else {
+        FormatingOfAveragesAndDisplaying(composableFunctionAttributes.modifier, locationInducedViewModel, locationInducedForecastWeatherResponse.periodWeatherConditions)
+        if (wasWeatherForecastSuccessful == true) {
+            locationInducedViewModel.recordLocationGenerallyOrAsFavourite(locationInducedViewModel.currentUserCoordinates, false)
+        }
+        wasWeatherForecastSuccessful = null
+    }
+}
+
+@Composable
 fun FormatingOfAveragesAndDisplaying(modifier: Modifier, locationInducedViewModel: LocationInducedViewModel, periodWeatherConditions: List<PeriodWeatherConditions>) {
-    periodWeatherConditions.forEach { periodWeatherConditions ->
-        val dayOfTheWeek = locationInducedViewModel.convertTimestampIntoDayOfTheWeek(periodWeatherConditions.timeOfDataForecast)
-        when {
-            locationInducedViewModel.previousDayOfTheWeek.isEmpty() -> {
-                locationInducedViewModel.previousDayOfTheWeek = dayOfTheWeek
-                locationInducedViewModel.sameDayTemperatureValues.add(periodWeatherConditions.weatherConditionsNumericalSummary.temperature)
+    var daysOfTheWeekIndex = 0
+    periodWeatherConditions.forEachIndexed { index, periodWeatherCondition ->
+        val dayOfTheWeek = locationInducedViewModel.convertTimestampIntoDayOfTheWeek(periodWeatherCondition.timeOfDataForecast)
+        val isNextForecastOnADifferentDay = index + 1 <= periodWeatherConditions.size - 1 && dayOfTheWeek != locationInducedViewModel.convertTimestampIntoDayOfTheWeek(periodWeatherConditions[index + 1].timeOfDataForecast)
+
+        if (isNextForecastOnADifferentDay || (index == periodWeatherConditions.size - 1 && daysOfTheWeekIndex < 5)) {
+            var averageTemperature = "${locationInducedViewModel.sameDayTemperatureValues.average().toInt()}$DEGREE_CHARACTER"
+            var imageResourceIdentifier = getMapForecastWeatherTypeToWeatherImageIcon(periodWeatherCondition.weather.first().main)
+            locationInducedViewModel.averageForecastTemperatures.add(averageTemperature)
+            locationInducedViewModel.forecastIconResourceIdentifier.add(imageResourceIdentifier)
+            val rowItemValues = RowItemValues(
+                currentTemperature = averageTemperature,
+                imageResourceIdentifier = imageResourceIdentifier,
+                dayOfTheWeek = locationInducedViewModel.forecastDays[daysOfTheWeekIndex],
+                textStyle = TextStyle.Default,
+            )
+            WeatherForecastRowItem(modifier, rowItemValues)
+            daysOfTheWeekIndex++
+        } else {
+            if (!locationInducedViewModel.forecastDays.contains(dayOfTheWeek)) {
+                locationInducedViewModel.forecastDays.add(dayOfTheWeek)
             }
-            locationInducedViewModel.previousDayOfTheWeek == dayOfTheWeek -> {
-                locationInducedViewModel.sameDayTemperatureValues.add(periodWeatherConditions.weatherConditionsNumericalSummary.temperature)
-            }
-            locationInducedViewModel.previousDayOfTheWeek != dayOfTheWeek-> {
-                var averageTemperature = "${locationInducedViewModel.sameDayTemperatureValues.average().toInt()}$DEGREE_CHARACTER"
-                var imageResourceIdentifier = getMapForecastWeatherTypeToWeatherImageIcon(periodWeatherConditions.weather.first().main)
-                val rowItemValues = RowItemValues(
-                    currentTemperature = averageTemperature,
-                    imageResourceIdentifier = imageResourceIdentifier,
-                    dayOfTheWeek = locationInducedViewModel.previousDayOfTheWeek,
-                    textStyle = TextStyle.Default,
-                )
-                locationInducedViewModel.averageForecastTemperatures.add(averageTemperature)
-                locationInducedViewModel.forecastIconResourceIdentifier.add(imageResourceIdentifier)
-                locationInducedViewModel.forecastDays.add(locationInducedViewModel.previousDayOfTheWeek)
-                WeatherForecastRowItem(modifier, rowItemValues)
-                locationInducedViewModel.sameDayTemperatureValues.clear()
-                locationInducedViewModel.previousDayOfTheWeek = dayOfTheWeek
-                locationInducedViewModel.sameDayTemperatureValues.add(periodWeatherConditions.weatherConditionsNumericalSummary.temperature)
-            }
+            locationInducedViewModel.sameDayTemperatureValues.add(periodWeatherCondition.weatherConditionsNumericalSummary.temperature)
         }
     }
 }

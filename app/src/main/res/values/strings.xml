@@ -3,6 +3,7 @@
     <string name="favourite_location">Favourite Locations</string>
     <string name="add_favourite_location">Add location to Favourites</string>
     <string name="view_favourites">Favourites</string>
+    <string name="view_favourites_in_maps">View Favourite in Maps</string>
     <string name="min_temperature">min</string>
     <string name="current_temperature">Current</string>
     <string name="max_temperature">max</string>
@@ -10,6 +11,7 @@
     <string name="error_icon_description">Error icon</string>
     <string name="home_screen">Home</string>
     <string name="ok_button">OK</string>
+    <string name="saved_location">Saved Location</string>
     <string name="favouriteName">Enter Favourite Name</string>
     <string name="user_input_message">Add Favourite Name</string>
     <string name="location_already_exists">Location already exists in as your favourite</string>

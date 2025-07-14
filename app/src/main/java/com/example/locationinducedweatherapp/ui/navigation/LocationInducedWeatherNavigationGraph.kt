@@ -6,6 +6,7 @@ import androidx.navigation.compose.composable
 import com.example.locationinducedweatherapp.data.model.ComposableFunctionAttributes
 import com.example.locationinducedweatherapp.ui.LocationInducedWeatherFailure
 import com.example.locationinducedweatherapp.ui.LocationInducedWeatherReport
+import com.example.locationinducedweatherapp.ui.ViewAllFavouriteLocationsInGoogleMaps
 import com.example.locationinducedweatherapp.ui.ViewFavouriteLocationProfiles
 import com.example.locationinducedweatherapp.viewModel.LocationInducedViewModel
 
@@ -22,6 +23,10 @@ fun LocationInducedWeatherNavigationGraph (composableFunctionAttributes: Composa
 
         composable(route = LocationInducedWeatherNavigationScreen.ViewFavouriteLocationProfilesScreen.route) {
             ViewFavouriteLocationProfiles(composableFunctionAttributes, locationInducedViewModel)
+        }
+
+        composable(route = LocationInducedWeatherNavigationScreen.ViewAllFavouriteLocationsInGoogleMapsScreen.route) {
+            ViewAllFavouriteLocationsInGoogleMaps(composableFunctionAttributes, locationInducedViewModel)
         }
     }
 }

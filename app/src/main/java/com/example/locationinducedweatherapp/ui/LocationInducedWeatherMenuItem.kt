@@ -22,7 +22,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
@@ -30,8 +29,6 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.example.locationinducedweatherapp.R
 import com.example.locationinducedweatherapp.data.model.ComposableFunctionAttributes
-import com.example.locationinducedweatherapp.room.entitties.SavedFavourites
-import com.example.locationinducedweatherapp.room.entitties.UserFavouriteLocationProfiles
 import com.example.locationinducedweatherapp.ui.navigation.LocationInducedWeatherNavigationScreen
 import com.example.locationinducedweatherapp.viewModel.LocationInducedViewModel
 
@@ -67,6 +64,13 @@ fun LocationInducedWeatherMenuItem(composableFunctionAttributes: ComposableFunct
                 navigationController.navigate(route = LocationInducedWeatherNavigationScreen.ViewFavouriteLocationProfilesScreen.route)
             }
         )
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.view_favourites_in_maps)) },
+            onClick = {
+                locationInducedViewModel.shouldShowMenuItems(false)
+                navigationController.navigate(route = LocationInducedWeatherNavigationScreen.ViewAllFavouriteLocationsInGoogleMapsScreen.route)
+            }
+        )
     }
 }
 
@@ -74,11 +78,12 @@ fun LocationInducedWeatherMenuItem(composableFunctionAttributes: ComposableFunct
 fun AddAProfileForSavedFavouriteLocation(locationInducedViewModel: LocationInducedViewModel) = with(locationInducedViewModel) {
     val locationGridPoints = "${locationCoordinates.latitude};${locationCoordinates.longitude}"
     doesLocationAlreadyExist(locationGridPoints)
+    val doesLocationAlreadyExist = doesLocationAlreadyExist.collectAsState(initial = false).value
     when {
-        !doesLocationAlreadyExist.collectAsState(initial = false).value ->
+        !doesLocationAlreadyExist ->
             LocationAlreadyExistsFavouritesList(locationInducedViewModel, true, locationGridPoints)
 
-        doesLocationAlreadyExist.collectAsState(initial = false).value -> {
+        else -> {
             LocationAlreadyExistsFavouritesList(locationInducedViewModel, false, locationGridPoints)
         }
     }
@@ -111,15 +116,12 @@ fun LocationAlreadyExistsFavouritesList(locationInducedViewModel: LocationInduce
             Button(onClick = {
                 if (isUserInputNeeded) {
                     locationInducedViewModel.userGivenNameFavouriteLocation = userFavouriteLocationName
-                    locationInducedViewModel.recordLocationAsFavourite(locationGridPoints)
+                    locationInducedViewModel.recordLocationGenerallyOrAsFavourite(locationGridPoints)
                 }
                 locationInducedViewModel.shouldDismissAlertDialog(true)
                 locationInducedViewModel.setShouldAddEntityEntry(false)
             }) {
-                Text(
-                    stringResource(R.string.ok_button),
-                    style = MaterialTheme.typography.titleSmall
-                )
+                Text(stringResource(R.string.ok_button), style = MaterialTheme.typography.titleSmall)
             }
         }
     )

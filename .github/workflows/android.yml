@@ -127,4 +127,4 @@ jobs:
           firebase appdisribution:distribute app/build/outputs/apk/release/app-release.apk \
             --app ${{ secrets.FIREBASE_APP_ID }} \
             --token ${{ secrets.FIREBASE_CLI_TOKEN }} \
-            --groups recipients
+            --emails "LBecker@dvtsoftware.com"

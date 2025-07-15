@@ -4,10 +4,12 @@ import com.example.locationinducedweatherapp.util.Constants.Companion.LOCATION_I
 import com.example.locationinducedweatherapp.util.Constants.Companion.LOCATION_INDUCED_WEATHER_REPORT_SCREEN
 import com.example.locationinducedweatherapp.util.Constants.Companion.VIEW_ALL_FAVOURITE_LOCATIONS_IN_MAPS_SCREEN
 import com.example.locationinducedweatherapp.util.Constants.Companion.VIEW_FAVOURITE_LOCATION_PROFILES_SCREEN
+import com.example.locationinducedweatherapp.util.Constants.Companion.VIEW_USER_GOOGLE_PLACES_SCREEN
 
 sealed class LocationInducedWeatherNavigationScreen(val route: String) {
     data object LocationInducedWeatherReportScreen: LocationInducedWeatherNavigationScreen(route = LOCATION_INDUCED_WEATHER_REPORT_SCREEN)
     data object LocationInducedWeatherFailureScreen: LocationInducedWeatherNavigationScreen(route = LOCATION_INDUCED_WEATHER_FAILURE_SCREEN)
     data object ViewFavouriteLocationProfilesScreen: LocationInducedWeatherNavigationScreen(route = VIEW_FAVOURITE_LOCATION_PROFILES_SCREEN)
     data object ViewAllFavouriteLocationsInGoogleMapsScreen: LocationInducedWeatherNavigationScreen(route = VIEW_ALL_FAVOURITE_LOCATIONS_IN_MAPS_SCREEN)
+    data object ViewUserGooglePlacesScreen: LocationInducedWeatherNavigationScreen(route = VIEW_USER_GOOGLE_PLACES_SCREEN)
 }

@@ -27,7 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import com.example.locationinducedweatherapp.R
-import com.example.locationinducedweatherapp.data.model.ComposableFunctionAttributes
+import com.example.locationinducedweatherapp.viewModel.LocationInducedViewModel
 
 @Composable
 fun DisplayCircularProgressIndicator(modifier: Modifier, paddingValues: PaddingValues? = null) {
@@ -56,7 +56,7 @@ fun DisplayCircularProgressIndicator(modifier: Modifier, paddingValues: PaddingV
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SetUpScaffoldTopBar(composableFunctionAttributes: ComposableFunctionAttributes) = with(composableFunctionAttributes){
+fun SetUpScaffoldTopBar(locationInducedViewModel: LocationInducedViewModel) = with(locationInducedViewModel){
     TopAppBar(
         modifier = modifier.height(dimensionResource(R.dimen.dimension_65dp))
             .fillMaxWidth(),

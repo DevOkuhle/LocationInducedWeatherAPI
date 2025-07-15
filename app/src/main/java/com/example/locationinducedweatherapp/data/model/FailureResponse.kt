@@ -4,6 +4,5 @@ import com.example.locationinducedweatherapp.util.FailureTypeEnum
 
 data class FailureResponse (
     var failureType: FailureTypeEnum = FailureTypeEnum.GeneralErrorFailures,
-    var failureMessage: String = "",
-    var isWeatherAPI: Boolean = true
+    var failureMessage: String = ""
 )

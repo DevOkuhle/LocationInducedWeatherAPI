@@ -28,14 +28,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.example.locationinducedweatherapp.R
-import com.example.locationinducedweatherapp.data.model.ComposableFunctionAttributes
-import com.example.locationinducedweatherapp.ui.navigation.LocationInducedWeatherNavigationScreen
+import com.example.locationinducedweatherapp.util.Constants.Companion.FAILURE_STATE
+import com.example.locationinducedweatherapp.util.Constants.Companion.SUCCESS_STATE
 import com.example.locationinducedweatherapp.viewModel.LocationInducedViewModel
 
 @SuppressLint("ConfigurationScreenWidthHeight")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LocationInducedWeatherMenuItem(composableFunctionAttributes: ComposableFunctionAttributes, locationInducedViewModel: LocationInducedViewModel) = with(composableFunctionAttributes) {
+fun LocationInducedWeatherMenuItem(locationInducedViewModel: LocationInducedViewModel) = with(locationInducedViewModel) {
     val shouldShowMenuItems = locationInducedViewModel.shouldShowMenuItems.collectAsState().value
     IconButton(
         modifier = modifier.padding(dimensionResource(R.dimen.dimension_30dp))
@@ -61,15 +61,19 @@ fun LocationInducedWeatherMenuItem(composableFunctionAttributes: ComposableFunct
             text = { Text(stringResource(R.string.view_favourites)) },
             onClick = {
                 locationInducedViewModel.shouldShowMenuItems(false)
-                navigationController.navigate(route = LocationInducedWeatherNavigationScreen.ViewFavouriteLocationProfilesScreen.route)
-            }
+                locationInducedViewModel.navigateToViewFavouriteLocationProfilesScreen()            }
         )
         DropdownMenuItem(
             text = { Text(stringResource(R.string.view_favourites_in_maps)) },
             onClick = {
                 locationInducedViewModel.shouldShowMenuItems(false)
-                navigationController.navigate(route = LocationInducedWeatherNavigationScreen.ViewAllFavouriteLocationsInGoogleMapsScreen.route)
-            }
+                locationInducedViewModel.navigateToViewAllFavouriteLocationsInGoogleMapsScreen()            }
+        )
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.autocomplete_search)) },
+            onClick = {
+                locationInducedViewModel.shouldShowMenuItems(false)
+                locationInducedViewModel.viewUserGooglePlacesScreen()            }
         )
     }
 }
@@ -79,18 +83,21 @@ fun AddAProfileForSavedFavouriteLocation(locationInducedViewModel: LocationInduc
     val locationGridPoints = "${locationCoordinates.latitude};${locationCoordinates.longitude}"
     doesLocationAlreadyExist(locationGridPoints)
     val doesLocationAlreadyExist = doesLocationAlreadyExist.collectAsState(initial = false).value
-    when {
-        !doesLocationAlreadyExist ->
-            LocationAlreadyExistsFavouritesList(locationInducedViewModel, true, locationGridPoints)
 
-        else -> {
-            LocationAlreadyExistsFavouritesList(locationInducedViewModel, false, locationGridPoints)
+    when (doesLocationAlreadyExist) {
+        SUCCESS_STATE -> {
+            AddFavouriteLocationIfItDoesNotAlreadyExists(locationInducedViewModel, true, locationGridPoints)
+            doesLocationAlreadyExist(-1)
+        }
+        FAILURE_STATE -> {
+            AddFavouriteLocationIfItDoesNotAlreadyExists(locationInducedViewModel, false, locationGridPoints)
+            doesLocationAlreadyExist(-1)
         }
     }
 }
 
 @Composable
-fun LocationAlreadyExistsFavouritesList(locationInducedViewModel: LocationInducedViewModel, isUserInputNeeded: Boolean, locationGridPoints: String) {
+fun AddFavouriteLocationIfItDoesNotAlreadyExists(locationInducedViewModel: LocationInducedViewModel, isUserInputNeeded: Boolean, locationGridPoints: String) {
     var userFavouriteLocationName by remember { mutableStateOf("") }
     var title = if (isUserInputNeeded) stringResource(R.string.user_input_message) else ""
     AlertDialog(
@@ -100,7 +107,9 @@ fun LocationAlreadyExistsFavouritesList(locationInducedViewModel: LocationInduce
             if (isUserInputNeeded) {
                 TextField(
                     value = userFavouriteLocationName,
-                    onValueChange = { userFavouriteLocationName = it },
+                    onValueChange = { newValue ->
+                        userFavouriteLocationName = newValue
+                    },
                     label = { Text(stringResource(R.string.user_input_message)) },
                     singleLine = true
                 )
@@ -113,14 +122,17 @@ fun LocationAlreadyExistsFavouritesList(locationInducedViewModel: LocationInduce
 
         },
         confirmButton = {
-            Button(onClick = {
-                if (isUserInputNeeded) {
-                    locationInducedViewModel.userGivenNameFavouriteLocation = userFavouriteLocationName
-                    locationInducedViewModel.recordLocationGenerallyOrAsFavourite(locationGridPoints)
-                }
-                locationInducedViewModel.shouldDismissAlertDialog(true)
-                locationInducedViewModel.setShouldAddEntityEntry(false)
-            }) {
+            Button(
+                onClick = {
+                    if (isUserInputNeeded) {
+                        locationInducedViewModel.userGivenNameFavouriteLocation = userFavouriteLocationName
+                        locationInducedViewModel.recordLocationGenerallyOrAsFavourite(locationGridPoints)
+                    }
+                    locationInducedViewModel.shouldDismissAlertDialog(true)
+                    locationInducedViewModel.setShouldAddEntityEntry(false)
+                },
+                enabled = if (isUserInputNeeded) userFavouriteLocationName.trim().length > 3 else true
+            ) {
                 Text(stringResource(R.string.ok_button), style = MaterialTheme.typography.titleSmall)
             }
         }

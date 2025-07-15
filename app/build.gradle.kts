@@ -63,7 +63,11 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.maps.compose)
+    implementation(libs.androidx.appcompat)
     testImplementation(libs.junit)
+    implementation(libs.material)
+    implementation(libs.accompanist.systemuicontroller)
+    implementation(libs.androidx.fragment.ktx)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
@@ -105,4 +109,5 @@ dependencies {
     //Google Play
     implementation(libs.play.services.location)
     implementation(libs.androidx.activity.compose.v180)
+    implementation(libs.places)
 }

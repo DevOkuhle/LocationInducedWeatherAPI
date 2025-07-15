@@ -11,7 +11,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import com.example.locationinducedweatherapp.R
-import com.example.locationinducedweatherapp.data.model.ComposableFunctionAttributes
 import com.example.locationinducedweatherapp.util.DisplayCircularProgressIndicator
 import com.example.locationinducedweatherapp.viewModel.LocationInducedViewModel
 import com.google.android.gms.maps.model.CameraPosition
@@ -22,13 +21,13 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 
 @Composable
-fun ViewAllFavouriteLocationsInGoogleMaps(composableFunctionAttributes: ComposableFunctionAttributes, locationInducedViewModel: LocationInducedViewModel) = with(locationInducedViewModel) {
+fun ViewAllFavouriteLocationsInGoogleMaps(locationInducedViewModel: LocationInducedViewModel) = with(locationInducedViewModel) {
+    readUserFavouriteLocationProfiles()
     var loading by rememberSaveable { mutableStateOf(true) }
-    locationInducedViewModel.readUserFavouriteLocationProfiles()
     if (loading) {
-        DisplayCircularProgressIndicator(composableFunctionAttributes.modifier)
+        DisplayCircularProgressIndicator(modifier)
         userFavouriteLocationProfiles = readUserFavouriteLocationProfiles.collectAsState().value
-        if (userFavouriteLocationProfiles.isNotEmpty()) {
+        if (userFavouriteLocationProfiles.isNotEmpty() || isInvocationFromGooglePlaces) {
             loading = false
         }
     }
@@ -41,22 +40,28 @@ fun ViewAllFavouriteLocationsInGoogleMaps(composableFunctionAttributes: Composab
         }
 
         Surface(
-            modifier = composableFunctionAttributes.modifier.fillMaxSize()
+            modifier = modifier.fillMaxSize()
         ) {
-            Box(modifier = composableFunctionAttributes.modifier.fillMaxSize()) {
-                GoogleMap(
-                    cameraPositionState = cameraPositionState
-                ) {
-                    convertCoordinatesIntoNewFormat.forEach { convertedCoordinates ->
+            Box(modifier = modifier.fillMaxSize()) {
+                GoogleMap(cameraPositionState = cameraPositionState) {
+                    if (isInvocationFromGooglePlaces) {
                         Marker(
-                            state = MarkerState(position = convertedCoordinates),
+                            state = MarkerState(position = locationInducedViewModel.searchPlaceInGoogle ?: LatLng(0.0, 0.0)),
                             title = stringResource(R.string.saved_location),
-                            snippet = "${convertedCoordinates.latitude}, ${convertedCoordinates.longitude}"
+                            snippet = "${locationInducedViewModel.searchPlaceInGoogle?.latitude}, ${locationInducedViewModel.searchPlaceInGoogle?.longitude}"
                         )
+                        isInvocationFromGooglePlaces = false
+                    } else {
+                        convertCoordinatesIntoNewFormat.forEach { convertedCoordinates ->
+                            Marker(
+                                state = MarkerState(position = convertedCoordinates),
+                                title = stringResource(R.string.saved_location),
+                                snippet = "${convertedCoordinates.latitude}, ${convertedCoordinates.longitude}"
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
-//TODO add a failure handler when there's no profile

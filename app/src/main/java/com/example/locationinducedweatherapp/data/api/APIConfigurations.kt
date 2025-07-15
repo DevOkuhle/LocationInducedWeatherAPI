@@ -9,7 +9,7 @@ import java.io.IOException
 import java.net.UnknownHostException
 
 class APIConfigurations {
-    fun <T> populateResponseFromWeatherAPI(isWeatherAPI: Boolean = true, apiFunctionCall: suspend () -> Response<T>): Flow<APIResponseHandler<T>> {
+    fun <T> populateResponseFromWeatherAPI(apiFunctionCall: suspend () -> Response<T>): Flow<APIResponseHandler<T>> {
         lateinit var customWeatherResponse: Response<T>
         return flow {
             try {
@@ -23,7 +23,7 @@ class APIConfigurations {
             } catch (e: UnknownHostException) {
                 e.printStackTrace()
                 val networkErrorMessage = e.message ?: ""
-                emit(APIResponseHandler.Failure(failureResponse = FailureResponse(failureType = FailureTypeEnum.Internet, failureMessage = networkErrorMessage, isWeatherAPI = isWeatherAPI)))
+                emit(APIResponseHandler.Failure(failureResponse = FailureResponse(failureType = FailureTypeEnum.Internet, failureMessage = networkErrorMessage)))
                 return@flow
             }
             catch (e: IOException) {

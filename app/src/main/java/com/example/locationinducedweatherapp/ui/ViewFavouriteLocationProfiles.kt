@@ -12,9 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,41 +22,62 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.stringResource
 import com.example.locationinducedweatherapp.R
-import com.example.locationinducedweatherapp.data.model.ComposableFunctionAttributes
 import com.example.locationinducedweatherapp.util.DisplayCircularProgressIndicator
 import com.example.locationinducedweatherapp.util.SetUpScaffoldTopBar
 import com.example.locationinducedweatherapp.viewModel.LocationInducedViewModel
 
 @Composable
-fun ViewFavouriteLocationProfiles(composableFunctionAttributes: ComposableFunctionAttributes, locationInducedViewModel: LocationInducedViewModel) = with(composableFunctionAttributes) {
+fun ViewFavouriteLocationProfiles(locationInducedViewModel: LocationInducedViewModel) = with(locationInducedViewModel) {
     var loading by rememberSaveable { mutableStateOf(true) }
-    locationInducedViewModel.readUserFavouriteLocationProfiles()
+    var userCountryInput by rememberSaveable { mutableStateOf("") }
+    readUserFavouriteLocationProfiles()
     Scaffold(modifier = modifier.fillMaxSize(),
         topBar = {
-            SetUpScaffoldTopBar(composableFunctionAttributes)
+            SetUpScaffoldTopBar(locationInducedViewModel)
         }
     ) { innerPadding ->
         if (loading) {
             DisplayCircularProgressIndicator(modifier = modifier.fillMaxWidth(), innerPadding)
-            locationInducedViewModel.userFavouriteLocationProfiles = locationInducedViewModel.readUserFavouriteLocationProfiles.collectAsState().value
-            if (locationInducedViewModel.userFavouriteLocationProfiles.isNotEmpty()) {
+            userFavouriteLocationProfiles = readUserFavouriteLocationProfiles.collectAsState().value
+            if (userFavouriteLocationProfiles.isNotEmpty()) {
                 loading = false
             }
         } else {
             Column(modifier = modifier.padding(innerPadding)) {
+                if (userFavouriteLocationProfiles.size > 10) {
+                    Column(
+                        modifier = modifier.fillMaxWidth()
+                            .wrapContentHeight()
+                    ) {
+                        OutlinedTextField(
+                            value = userCountryInput,
+                            onValueChange = { userCountryInput = it },
+                            label = { Text(text = stringResource(R.string.search_for_your_favourite)) },
+                            modifier = modifier.fillMaxWidth()
+                                .padding(dimensionResource(R.dimen.dimension_8dp))
+                        )
+                        Box(
+                            modifier = modifier.padding(dimensionResource(R.dimen.dimension_8dp))
+                                .fillMaxWidth()
+                                .height(dimensionResource(R.dimen.dimension_2dp))
+                                .background(if (isSystemInDarkTheme()) Color.LightGray else Color.Black)
+                        )
+                    }
+                }
+
                 LazyColumn {
-                    itemsIndexed(locationInducedViewModel.userFavouriteLocationProfiles) { index, userFavouriteLocationProfile ->
+                    itemsIndexed(userFavouriteLocationProfiles) { index, userFavouriteLocationProfile ->
                         Column(
                             modifier = modifier.fillMaxWidth()
                                 .wrapContentHeight()
                                 .clickable {
-                                    locationInducedViewModel.selectedFavouriteLocationProfileIndex = index
-                                    locationInducedViewModel.profileSelectedClickAction(composableFunctionAttributes)
-                                    locationInducedViewModel.showWeatherForecastForFavouriteLocation(true)
+                                    selectedFavouriteLocationProfileIndex = index
+                                    profileSelectedClickAction(locationInducedViewModel)
+                                    showWeatherForecastForFavouriteLocation(true)
                                 }
                         ) {
                             Text(

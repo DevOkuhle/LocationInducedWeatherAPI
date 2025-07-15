@@ -18,12 +18,10 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.example.locationinducedweatherapp.R
-import com.example.locationinducedweatherapp.data.model.ComposableFunctionAttributes
-import com.example.locationinducedweatherapp.ui.navigation.LocationInducedWeatherNavigationScreen
 import com.example.locationinducedweatherapp.viewModel.LocationInducedViewModel
 
 @Composable
-fun LocationInducedWeatherFailure(composableFunctionAttributes: ComposableFunctionAttributes, locationInducedViewModel: LocationInducedViewModel) = with(composableFunctionAttributes) {
+fun LocationInducedWeatherFailure(locationInducedViewModel: LocationInducedViewModel) = with(locationInducedViewModel) {
     Column(
         modifier = modifier.fillMaxSize()
             .verticalScroll(rememberScrollState())
@@ -54,7 +52,7 @@ fun LocationInducedWeatherFailure(composableFunctionAttributes: ComposableFuncti
                 .fillMaxWidth()
         ) {
             Button(
-                onClick = { navigationController.navigate(route = LocationInducedWeatherNavigationScreen.LocationInducedWeatherReportScreen.route) },
+                onClick = { locationInducedViewModel.navigateToLocationInducedWeatherReportScreen() },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()

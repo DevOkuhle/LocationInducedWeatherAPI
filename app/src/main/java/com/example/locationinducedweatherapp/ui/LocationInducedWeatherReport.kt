@@ -3,6 +3,7 @@ package com.example.locationinducedweatherapp.ui
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Looper
@@ -36,7 +37,6 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import com.example.locationinducedweatherapp.R
-import com.example.locationinducedweatherapp.data.model.ComposableFunctionAttributes
 import com.example.locationinducedweatherapp.data.model.RowItemValues
 import com.example.locationinducedweatherapp.viewModel.LocationInducedViewModel
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -46,25 +46,30 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
 import androidx.core.content.ContextCompat
 import com.example.locationinducedweatherapp.data.model.CurrentWeatherMappedAttributes
+import com.example.locationinducedweatherapp.data.model.FailureResponse
 import com.example.locationinducedweatherapp.data.model.RememberSaveAblePassObject
 import com.example.locationinducedweatherapp.data.model.response.current.LocationInducedCurrentWeatherResponse
 import com.example.locationinducedweatherapp.data.model.response.forecast.PeriodWeatherConditions
-import com.example.locationinducedweatherapp.util.Constants.Companion.ANDROID_PACKAGE
 import com.example.locationinducedweatherapp.util.Constants.Companion.DEGREE_CHARACTER
+import com.example.locationinducedweatherapp.util.Constants.Companion.GPS_STATUS_CODE
+import com.example.locationinducedweatherapp.util.Constants.Companion.PERMISSION_TYPE_GPS_REQUEST
+import com.example.locationinducedweatherapp.util.Constants.Companion.PERMISSION_TYPE_LOCATION_REQUEST
+import com.example.locationinducedweatherapp.util.Constants.Companion.PERMISSION_TYPE_PERMANENTLY_DECLINED
 import com.example.locationinducedweatherapp.util.DisplayCircularProgressIndicator
+import com.example.locationinducedweatherapp.util.FailureTypeEnum
+import com.google.android.gms.common.api.ResolvableApiException
 import kotlin.String
+import androidx.core.net.toUri
 
 @SuppressLint("ConfigurationScreenWidthHeight")
 @Composable
-fun LocationInducedWeatherReport(composableFunctionAttributes: ComposableFunctionAttributes, locationInducedViewModel: LocationInducedViewModel) = with(composableFunctionAttributes) {
+fun LocationInducedWeatherReport(locationInducedViewModel: LocationInducedViewModel) = with(locationInducedViewModel) {
     var loading by rememberSaveable { mutableStateOf(true) }
     var locationPermissionGranted by rememberSaveable { mutableStateOf(false) }
-    var showLocationPermissionDescriptionDialog by rememberSaveable { mutableStateOf(false) }
     val localActivity = LocalActivity.current
     val context = LocalContext.current
     val rememberSaveAblePassObjectForLoading = RememberSaveAblePassObject(
@@ -72,40 +77,48 @@ fun LocationInducedWeatherReport(composableFunctionAttributes: ComposableFunctio
         setSaveAbleStateFlowToFalse = { loading = false},
         setSaveAbleStateFlowToTrue = { loading = true }
     )
-    val rememberSaveAblePassObjectForDialog = RememberSaveAblePassObject(
-        saveAbleStateFlow = showLocationPermissionDescriptionDialog,
-        setSaveAbleStateFlowToFalse = { showLocationPermissionDescriptionDialog = false},
-        setSaveAbleStateFlowToTrue = { showLocationPermissionDescriptionDialog = true }
-    )
     val permission = Manifest.permission.ACCESS_FINE_LOCATION
-    val shouldShowWeatherForecastForFavouriteLocation = locationInducedViewModel.showWeatherForecastForFavouriteLocation.collectAsState().value
-    val shouldDismissAlertDialog = locationInducedViewModel.shouldDismissAlertDialog.collectAsState().value
-    val locationRequested = locationInducedViewModel.locationRequested.collectAsState().value
-    val userLocationsInducedWeather = locationInducedViewModel.userLocationsInducedWeather.collectAsState().value
+    val shouldShowWeatherForecastForFavouriteLocation = showWeatherForecastForFavouriteLocation.collectAsState().value
+    val shouldDismissAlertDialog = shouldDismissAlertDialog.collectAsState().value
+    val locationRequested = locationRequested.collectAsState().value
+    val userLocationsInducedWeather = userLocationsInducedWeather.collectAsState().value
+    val showLocationPermissionDescriptionDialog = showLocationPermissionDescriptionDialog.collectAsState().value
 
     when {
         userLocationsInducedWeather.isNotEmpty() -> {
-            locationInducedViewModel.setUpLocationInducedWeatherResponse(userLocationsInducedWeather)
-            locationInducedViewModel.setUserLocationsInducedWeather(emptyList())
+            setUpLocationInducedWeatherResponse(userLocationsInducedWeather)
+            setUserLocationsInducedWeather(emptyList())
             loading = false
+            setWeatherAPISuccessfulFlag(-1)
         }
+
         shouldDismissAlertDialog -> {
-            locationInducedViewModel.shouldDismissAlertDialog(false)
+            shouldDismissAlertDialog(false)
             loading = false
         }
 
-        loading && !locationPermissionGranted && !shouldShowWeatherForecastForFavouriteLocation -> {
+        loading && !locationPermissionGranted && !shouldShowWeatherForecastForFavouriteLocation && !showLocationPermissionDescriptionDialog -> {
             DisplayCircularProgressIndicator(modifier = modifier.fillMaxWidth())
-            RequestLocationPermissionAndPopulateStateFlow(locationInducedViewModel, rememberSaveAblePassObjectForLoading, rememberSaveAblePassObjectForDialog) { locationPermissionGranted = true }
+            RequestLocationPermissionAndPopulateStateFlow(locationInducedViewModel, rememberSaveAblePassObjectForLoading) { locationPermissionGranted = true }
         }
 
-        loading && !locationRequested && !shouldShowWeatherForecastForFavouriteLocation -> {
+        loading && locationPermissionGranted && !locationRequested && !shouldShowWeatherForecastForFavouriteLocation && !showLocationPermissionDescriptionDialog-> {
             DisplayCircularProgressIndicator(modifier = modifier.fillMaxWidth())
             if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
-                locationInducedViewModel.evaluateGPSLocationSuccess()
-                if (locationInducedViewModel.gpsUserEnabled.collectAsState().value){
+                evaluateGPSLocationSuccess()
+                checkLocationSettings.addOnFailureListener { exception ->
+                    if (exception is ResolvableApiException) {
+                        try {
+                            localActivity?.let { activity -> exception.startResolutionForResult(activity, GPS_STATUS_CODE) }
+                        } catch (sendEx: IntentSender.SendIntentException) {
+                            setFailureResponseMutableStateFlow(FailureResponse(failureType = FailureTypeEnum.GeneralErrorFailures, failureMessage = sendEx.message.toString()))
+                        }
+                    }
+                }
+
+                if (gpsUserEnabled.collectAsState().value){
                     LaunchedEffect(Unit) {
-                        locationInducedViewModel.fusedLocationClient.requestLocationUpdates(locationInducedViewModel.locationRequest, locationInducedViewModel.locationCallback, Looper.getMainLooper())
+                        fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
                     }
                 }
             }
@@ -113,62 +126,90 @@ fun LocationInducedWeatherReport(composableFunctionAttributes: ComposableFunctio
 
         loading &&  (shouldShowWeatherForecastForFavouriteLocation || locationInducedViewModel.locationRequested.collectAsState().value) -> {
             DisplayCircularProgressIndicator(modifier = Modifier.fillMaxWidth())
-            locationInducedViewModel.locationInducedCurrentWeatherResponse = locationInducedViewModel.currentLocationWeatherInformationMutableStateFlow.collectAsState().value
-            locationInducedViewModel.locationInducedForecastWeatherResponse = locationInducedViewModel.locationWeatherForecastMutableStateFlow.collectAsState().value
-            locationInducedViewModel.failureResponse = locationInducedViewModel.failureResponseMutableStateFlow.collectAsState().value
-            locationInducedViewModel.performResponseHandling(composableFunctionAttributes) { loading = false }
-            locationInducedViewModel.selectedFavouriteLocationProfileIndex = -1
+            locationInducedCurrentWeatherResponse = currentLocationWeatherInformationMutableStateFlow.collectAsState().value
+            locationInducedForecastWeatherResponse = locationWeatherForecastMutableStateFlow.collectAsState().value
+            failureResponse = failureResponseMutableStateFlow.collectAsState().value
+            val weatherAPISuccessfulFlag = weatherAPISuccessfulFlag.collectAsState().value
+            performResponseHandling(weatherAPISuccessfulFlag) { loading = false }
+            selectedFavouriteLocationProfileIndex = -1
         }
 
         showLocationPermissionDescriptionDialog -> {
             LocationPermissionDescriptionDialog(
-                isPermanentlyDeclined = locationInducedViewModel.isPermanentlyDeclined,
-                onDismissed = { showLocationPermissionDescriptionDialog = false },
+                permissionTypeStatusCode = when (isPermanentlyDeclined) {
+                    false -> PERMISSION_TYPE_LOCATION_REQUEST
+                    true -> PERMISSION_TYPE_PERMANENTLY_DECLINED
+                    else -> PERMISSION_TYPE_GPS_REQUEST
+                },
+                onDismissed = { setShowLocationPermissionDescriptionDialog(false) },
                 onAcceptButton = {
-                    showLocationPermissionDescriptionDialog = false
-                    locationInducedViewModel.permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                    setShowLocationPermissionDescriptionDialog(false)
+                    loading = true
                 },
                 onGoToAppSetting = {
-                    localActivity?.let { activity ->
-                        val settingsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts(ANDROID_PACKAGE, localActivity.packageName, null))
-                        activity.startActivity(settingsIntent)
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = "package:${context.packageName}".toUri()
                     }
+                    context.startActivity(intent)
+                    setShowLocationPermissionDescriptionDialog(false)
                 }
             )
         }
 
         else -> {
-            ViewLocationInducedWeatherResults(composableFunctionAttributes, locationInducedViewModel)
+            ViewLocationInducedWeatherResults(locationInducedViewModel)
         }
     }
 }
 
 @Composable
-fun ViewLocationInducedWeatherResults(composableFunctionAttributes: ComposableFunctionAttributes, locationInducedViewModel: LocationInducedViewModel) = with(composableFunctionAttributes) {
+fun ViewLocationInducedWeatherResults(locationInducedViewModel: LocationInducedViewModel) = with(locationInducedViewModel) {
     Column(
         modifier = modifier.fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
-        val locationInducedCurrentWeatherResponse = locationInducedViewModel.locationInducedCurrentWeatherResponse
+        val locationInducedCurrentWeatherResponse = locationInducedCurrentWeatherResponse
         val currentWeatherMappedAttributes = mapCurrentWeatherToResources(locationInducedCurrentWeatherResponse.weatherDescription.first().main)
+        val shouldAddEntityEntry = locationInducedViewModel.shouldAddEntityEntry.collectAsState().value
         Box(
             modifier = modifier.weight(1f)
                 .fillMaxSize()
                 .background(colorResource(currentWeatherMappedAttributes.backgroundColorResource))
         ) {
             Image(
-                modifier = modifier.fillMaxSize(),
                 painter = painterResource(currentWeatherMappedAttributes.imageResource),
                 contentDescription = stringResource(R.string.image_description),
-                contentScale = ContentScale.Fit
+                contentScale = ContentScale.Crop,
+                modifier = modifier.fillMaxSize()
             )
 
-            if (locationInducedViewModel.shouldAddEntityEntry.collectAsState().value) {
-                AddAProfileForSavedFavouriteLocation(locationInducedViewModel)
-            } else {
-                Column(modifier = modifier.align(Alignment.TopStart)) {
-                    LocationInducedWeatherMenuItem(composableFunctionAttributes, locationInducedViewModel)
+            when {
+                shouldAddEntityEntry -> AddAProfileForSavedFavouriteLocation(locationInducedViewModel)
+                !shouldAddEntityEntry -> {
+                    Column(modifier = modifier.align(Alignment.TopStart)) {
+                        LocationInducedWeatherMenuItem(locationInducedViewModel)
+                    }
                 }
+            }
+            if (isOffLineMode) {
+                Column(
+                    modifier = modifier.align(Alignment.TopEnd)
+                        .padding(
+                            end = dimensionResource(R.dimen.dimension_8dp),
+                            top = dimensionResource(R.dimen.dimension_30dp)
+                        )
+                ) {
+                    Text(
+                        text = stringResource(R.string.offline_mode),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = stringResource(R.string.last_updated_time, lastUpdatedDate),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                lastUpdatedDate = ""
+                isOffLineMode = false
             }
             UpperScreenUISetup(modifier, currentWeatherMappedAttributes, locationInducedCurrentWeatherResponse)
         }
@@ -178,20 +219,20 @@ fun ViewLocationInducedWeatherResults(composableFunctionAttributes: ComposableFu
                 .background(colorResource(currentWeatherMappedAttributes.backgroundColorResource))
         ) {
             LowerScreenSetUp(modifier, locationInducedCurrentWeatherResponse)
-            PassDataDifferentlyWhenTriggeredFroFavourites(locationInducedViewModel, composableFunctionAttributes)
+            PassDataDifferentlyWhenTriggeredFroFavourites(locationInducedViewModel)
         }
     }
 }
 
 @Composable
-fun PassDataDifferentlyWhenTriggeredFroFavourites(locationInducedViewModel: LocationInducedViewModel, composableFunctionAttributes: ComposableFunctionAttributes) = with(locationInducedViewModel) {
+fun PassDataDifferentlyWhenTriggeredFroFavourites(locationInducedViewModel: LocationInducedViewModel) = with(locationInducedViewModel) {
     if (daysForecastRowItems.isNotEmpty()) {
         daysForecastRowItems.forEach { daysForecastRowItems ->
-            WeatherForecastRowItem(composableFunctionAttributes.modifier, daysForecastRowItems)
+            WeatherForecastRowItem(modifier, daysForecastRowItems)
         }
         daysForecastRowItems.clear()
     } else {
-        FormatingOfAveragesAndDisplaying(composableFunctionAttributes.modifier, locationInducedViewModel, locationInducedForecastWeatherResponse.periodWeatherConditions)
+        FormatingOfAveragesAndDisplaying(locationInducedViewModel, locationInducedForecastWeatherResponse.periodWeatherConditions)
         if (wasWeatherForecastSuccessful == true) {
             locationInducedViewModel.recordLocationGenerallyOrAsFavourite(locationInducedViewModel.currentUserCoordinates, false)
         }
@@ -200,30 +241,17 @@ fun PassDataDifferentlyWhenTriggeredFroFavourites(locationInducedViewModel: Loca
 }
 
 @Composable
-fun FormatingOfAveragesAndDisplaying(modifier: Modifier, locationInducedViewModel: LocationInducedViewModel, periodWeatherConditions: List<PeriodWeatherConditions>) {
+fun FormatingOfAveragesAndDisplaying(locationInducedViewModel: LocationInducedViewModel, periodWeatherConditions: List<PeriodWeatherConditions>) = with(locationInducedViewModel) {
     var daysOfTheWeekIndex = 0
     periodWeatherConditions.forEachIndexed { index, periodWeatherCondition ->
-        val dayOfTheWeek = locationInducedViewModel.convertTimestampIntoDayOfTheWeek(periodWeatherCondition.timeOfDataForecast)
-        val isNextForecastOnADifferentDay = index + 1 <= periodWeatherConditions.size - 1 && dayOfTheWeek != locationInducedViewModel.convertTimestampIntoDayOfTheWeek(periodWeatherConditions[index + 1].timeOfDataForecast)
+        val dayOfTheWeek = convertTimestampIntoDayOfTheWeek(periodWeatherCondition.timeOfDataForecast)
+        val isNextForecastOnADifferentDay = index + 1 <= periodWeatherConditions.size - 1 && dayOfTheWeek != convertTimestampIntoDayOfTheWeek(periodWeatherConditions[index + 1].timeOfDataForecast)
 
-        if (isNextForecastOnADifferentDay || (index == periodWeatherConditions.size - 1 && daysOfTheWeekIndex < 5)) {
-            var averageTemperature = "${locationInducedViewModel.sameDayTemperatureValues.average().toInt()}$DEGREE_CHARACTER"
-            var imageResourceIdentifier = getMapForecastWeatherTypeToWeatherImageIcon(periodWeatherCondition.weather.first().main)
-            locationInducedViewModel.averageForecastTemperatures.add(averageTemperature)
-            locationInducedViewModel.forecastIconResourceIdentifier.add(imageResourceIdentifier)
-            val rowItemValues = RowItemValues(
-                currentTemperature = averageTemperature,
-                imageResourceIdentifier = imageResourceIdentifier,
-                dayOfTheWeek = locationInducedViewModel.forecastDays[daysOfTheWeekIndex],
-                textStyle = TextStyle.Default,
-            )
-            WeatherForecastRowItem(modifier, rowItemValues)
+        if (isNextForecastOnADifferentDay || (index == periodWeatherConditions.size - 1 &&  daysOfTheWeekIndex < 5)) {
+            WeatherForecastRowItem(modifier, getRowItemAveragesForDayForecast(daysOfTheWeekIndex, periodWeatherCondition, dayOfTheWeek, index))
             daysOfTheWeekIndex++
         } else {
-            if (!locationInducedViewModel.forecastDays.contains(dayOfTheWeek)) {
-                locationInducedViewModel.forecastDays.add(dayOfTheWeek)
-            }
-            locationInducedViewModel.sameDayTemperatureValues.add(periodWeatherCondition.weatherConditionsNumericalSummary.temperature)
+            addValuesToMutableList(dayOfTheWeek, periodWeatherCondition)
         }
     }
 }
@@ -231,22 +259,22 @@ fun FormatingOfAveragesAndDisplaying(modifier: Modifier, locationInducedViewMode
 @Composable
 fun LowerScreenSetUp(modifier: Modifier, locationInducedCurrentWeatherResponse: LocationInducedCurrentWeatherResponse) {
     val weatherNumericalSummary = locationInducedCurrentWeatherResponse.weatherConditionsNumericalSummary
-    val rowItemValuesOne = RowItemValues(
-        minTemperature = "${weatherNumericalSummary.minimumTemperature.toInt()}$DEGREE_CHARACTER",
-        currentTemperature = "${weatherNumericalSummary.temperature.toInt()}$DEGREE_CHARACTER",
-        maxTemperature = "${weatherNumericalSummary.maximumTemperature.toInt()}$DEGREE_CHARACTER",
-        textStyle = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.SemiBold
+    CurrentWeatherRowItem(modifier, RowItemValues(
+            minTemperature = "${weatherNumericalSummary.minimumTemperature.toInt()}$DEGREE_CHARACTER",
+            currentTemperature = "${weatherNumericalSummary.temperature.toInt()}$DEGREE_CHARACTER",
+            maxTemperature = "${weatherNumericalSummary.maximumTemperature.toInt()}$DEGREE_CHARACTER",
+            textStyle = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold
+        )
     )
-    val rowItemValuesTwo = RowItemValues(
-        minTemperature = stringResource(R.string.min_temperature),
-        currentTemperature = stringResource(R.string.current_temperature),
-        maxTemperature = stringResource(R.string.max_temperature),
-        textStyle = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.Normal
+    CurrentWeatherRowItem(modifier, RowItemValues(
+            minTemperature = stringResource(R.string.min_temperature),
+            currentTemperature = stringResource(R.string.current_temperature),
+            maxTemperature = stringResource(R.string.max_temperature),
+            textStyle = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Normal
+        )
     )
-    CurrentWeatherRowItem(modifier, rowItemValuesOne)
-    CurrentWeatherRowItem(modifier, rowItemValuesTwo)
     Box(
         modifier = modifier.fillMaxWidth()
             .height(dimensionResource(R.dimen.dimension_2dp))
@@ -276,16 +304,6 @@ fun UpperScreenUISetup(modifier: Modifier, currentWeatherMappedAttributes: Curre
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold
         )
-    }
-}
-
-@Composable
-fun getMapForecastWeatherTypeToWeatherImageIcon(weatherType: String): Int {
-    val weatherStatuses = stringArrayResource(R.array.weatherStatuses).toList()
-    return when {
-        weatherStatuses.first().contains(weatherType, ignoreCase = true) -> R.drawable.rain_large
-        weatherStatuses.last().contains(weatherType, ignoreCase = true) -> R.drawable.sunny_large
-        else -> R.drawable.partly_sunny_large
     }
 }
 
@@ -388,7 +406,7 @@ private fun CurrentWeatherRowItem(modifier: Modifier, rowItemValues: RowItemValu
 }
 
 @Composable
-fun RequestLocationPermissionAndPopulateStateFlow(locationInducedViewModel: LocationInducedViewModel, rememberSaveAblePassObjectForLoading: RememberSaveAblePassObject, rememberSaveAblePassObjectForDialog: RememberSaveAblePassObject, onLocationPermissionGrantedMutableState: () -> Unit) {
+fun RequestLocationPermissionAndPopulateStateFlow(locationInducedViewModel: LocationInducedViewModel, rememberSaveAblePassObjectForLoading: RememberSaveAblePassObject, onLocationPermissionGrantedMutableState: () -> Unit) {
     val localActivity = LocalActivity.current
     val permission = Manifest.permission.ACCESS_FINE_LOCATION
     locationInducedViewModel.permissionLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission(), onResult = { isGranted ->
@@ -401,8 +419,8 @@ fun RequestLocationPermissionAndPopulateStateFlow(locationInducedViewModel: Loca
             localActivity?.let { localActivity ->
                  locationInducedViewModel.isPermanentlyDeclined = !shouldShowRequestPermissionRationale(localActivity, permission)
             }
-            rememberSaveAblePassObjectForDialog.setSaveAbleStateFlowToTrue
             rememberSaveAblePassObjectForLoading.setSaveAbleStateFlowToFalse
+            locationInducedViewModel.setShowLocationPermissionDescriptionDialog(true)
         }
     })
 

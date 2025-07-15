@@ -3,30 +3,34 @@ package com.example.locationinducedweatherapp.ui.navigation
 import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.example.locationinducedweatherapp.data.model.ComposableFunctionAttributes
 import com.example.locationinducedweatherapp.ui.LocationInducedWeatherFailure
 import com.example.locationinducedweatherapp.ui.LocationInducedWeatherReport
 import com.example.locationinducedweatherapp.ui.ViewAllFavouriteLocationsInGoogleMaps
 import com.example.locationinducedweatherapp.ui.ViewFavouriteLocationProfiles
+import com.example.locationinducedweatherapp.ui.SearchForLocationInAutoComplete
 import com.example.locationinducedweatherapp.viewModel.LocationInducedViewModel
 
 @Composable
-fun LocationInducedWeatherNavigationGraph (composableFunctionAttributes: ComposableFunctionAttributes, locationInducedViewModel: LocationInducedViewModel) = with(composableFunctionAttributes) {
-    NavHost(navController = navigationController, startDestination = LocationInducedWeatherNavigationScreen.LocationInducedWeatherReportScreen.route) {
+fun LocationInducedWeatherNavigationGraph(locationInducedViewModel: LocationInducedViewModel) {
+    NavHost(navController = locationInducedViewModel.navigationController, startDestination = LocationInducedWeatherNavigationScreen.LocationInducedWeatherReportScreen.route) {
         composable(route = LocationInducedWeatherNavigationScreen.LocationInducedWeatherReportScreen.route) {
-            LocationInducedWeatherReport(composableFunctionAttributes, locationInducedViewModel)
+            LocationInducedWeatherReport(locationInducedViewModel)
         }
 
         composable(route = LocationInducedWeatherNavigationScreen.LocationInducedWeatherFailureScreen.route) {
-            LocationInducedWeatherFailure(composableFunctionAttributes, locationInducedViewModel)
+            LocationInducedWeatherFailure(locationInducedViewModel)
         }
 
         composable(route = LocationInducedWeatherNavigationScreen.ViewFavouriteLocationProfilesScreen.route) {
-            ViewFavouriteLocationProfiles(composableFunctionAttributes, locationInducedViewModel)
+            ViewFavouriteLocationProfiles(locationInducedViewModel)
         }
 
         composable(route = LocationInducedWeatherNavigationScreen.ViewAllFavouriteLocationsInGoogleMapsScreen.route) {
-            ViewAllFavouriteLocationsInGoogleMaps(composableFunctionAttributes, locationInducedViewModel)
+            ViewAllFavouriteLocationsInGoogleMaps(locationInducedViewModel)
+        }
+
+        composable(route = LocationInducedWeatherNavigationScreen.ViewUserGooglePlacesScreen.route) {
+            SearchForLocationInAutoComplete(locationInducedViewModel)
         }
     }
 }

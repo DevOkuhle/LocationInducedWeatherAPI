@@ -5,5 +5,4 @@ import androidx.navigation.NavHostController
 
 data class ComposableFunctionAttributes (
     val modifier: Modifier,
-    val navigationController: NavHostController
 )

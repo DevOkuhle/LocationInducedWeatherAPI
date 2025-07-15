@@ -9,27 +9,34 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import com.example.locationinducedweatherapp.R
+import com.example.locationinducedweatherapp.util.Constants.Companion.PERMISSION_TYPE_GPS_REQUEST
+import com.example.locationinducedweatherapp.util.Constants.Companion.PERMISSION_TYPE_LOCATION_REQUEST
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LocationPermissionDescriptionDialog(
-    isPermanentlyDeclined: Boolean,
+    permissionTypeStatusCode: Int,
     onDismissed: () -> Unit,
-    onAcceptButton: () -> Unit,
-    onGoToAppSetting: () -> Unit
+    onAcceptButton: () -> Unit = {},
+    onGoToAppSetting: () -> Unit = {}
 ) {
     AlertDialog(
         onDismissRequest = { onDismissed() },
         confirmButton = {
-            TextButton(onClick = {
-                if (isPermanentlyDeclined) {
-                    onGoToAppSetting
-                } else {
-                    onAcceptButton()
+            TextButton(
+                onClick = {
+                    when(permissionTypeStatusCode) {
+                        PERMISSION_TYPE_LOCATION_REQUEST, PERMISSION_TYPE_GPS_REQUEST -> onAcceptButton()
+                        else -> onGoToAppSetting()
+                    }
                 }
-            }) {
+            ) {
+                val confirmButtonTitle = when(permissionTypeStatusCode) {
+                    PERMISSION_TYPE_LOCATION_REQUEST, PERMISSION_TYPE_GPS_REQUEST -> stringResource(R.string.grant_permission)
+                    else -> stringResource(R.string.open_app_settings)
+                }
                 Text(
-                    text = stringResource(if (isPermanentlyDeclined) R.string.open_app_settings else R.string.grant_permission),
+                    text = confirmButtonTitle,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -43,8 +50,13 @@ fun LocationPermissionDescriptionDialog(
             )
         },
         text = {
+            val locationPermissionDescription = when(permissionTypeStatusCode) {
+                PERMISSION_TYPE_LOCATION_REQUEST -> stringResource(R.string.location_permission_enquiry)
+                PERMISSION_TYPE_GPS_REQUEST -> stringResource(R.string.enable_gps_location_enquiry)
+                else -> stringResource(R.string.location_permission_permanent_decline_message)
+            }
             Text(
-                text = stringResource(if (isPermanentlyDeclined) R.string.location_permission_permanent_decline_message else R.string.location_permission_enquiry),
+                text = locationPermissionDescription,
                 style = MaterialTheme.typography.bodySmall
             )
         }

@@ -4,8 +4,6 @@ on:
   push:
     branches: 
      - '**'
-
-     
      
 jobs:
   build:
@@ -43,31 +41,12 @@ jobs:
           
           Commit by: ${{ github.actor }}
           Message: ${{ github.event.head_commit.message }}
-          View it here: ${{ github.event.head_commit.url }}
-
-  build_failure_notifications:
-    needs: [build, push_notifications]
-    if: ${{ needs.build.result != 'success' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Report failure via email
-        uses: dawidd6/action-send-mail@v4
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.GMAIL_USER }}
-          password: ${{ secrets.GMAIL_PASS }}
-          to: ${{ secrets.GMAIL_USER }}
-          from: ${{ secrets.GMAIL_USER }}
-          subject: "Build failed notification from user <${{ secrets.GMAIL_USER }}>"
-          body: |
-            Build with commit message of ${{ github.event.head_commit.message }} on branch ${{ github.ref_name }} failed.
-            See details: ${{ github.run_url }}        
+          View it here: ${{ github.event.head_commit.url }}       
     
 
   unit_test:    
     runs-on: ubuntu-latest
-    needs: [ build, push_notifications, build_failure_notifications ]
+    needs: [ build, push_notifications ]
     steps:
     - name: 🧪 Run unit tests
       run: ./gradlew testDebugUnitTest
@@ -81,7 +60,7 @@ jobs:
 
   lint_setup:
     runs-on: ubuntu-latest
-    needs: [unit_test, build, build_failure_notifications, push_notifications]
+    needs: [unit_test, build, push_notifications]
     steps:
     - name: Run Lint
       run: ./gradlew lintDebug --no-daemon
@@ -96,7 +75,7 @@ jobs:
         
   detekt_setup:
     runs-on: ubuntu-latest
-    needs: [lint_setup, unit_test, build, build_failure_notifications, push_notifications]
+    needs: [lint_setup, unit_test, build, push_notifications]
     steps:
     - name: Run Detekt
       run: ./gradlew detekt -Pdetekt.ignoreFailures=true
@@ -110,7 +89,7 @@ jobs:
 
   firebase_setup:
     runs-on : ubuntu-latest
-    needs: [detekt_setup, lint_setup, unit_test, build, build_failure_notifications, push_notifications]
+    needs: [detekt_setup, lint_setup, unit_test, build, push_notifications]
     steps:
     - name: Decode Firebase service account
       run: |
@@ -131,3 +110,22 @@ jobs:
             --app ${{ secrets.FIREBASE_APP_ID }} \
             --token ${{ secrets.FIREBASE_CLI_TOKEN }} \
             --emails "LBecker@dvtsoftware.com"
+
+  build_failure_notifications:
+    needs: [detekt_setup, lint_setup, unit_test, build, push_notifications, firebase_setup]
+    if: ${{ needs.build.result != 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report failure via email
+        uses: dawidd6/action-send-mail@v4
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USER }}
+          password: ${{ secrets.GMAIL_PASS }}
+          to: ${{ secrets.GMAIL_USER }}
+          from: ${{ secrets.GMAIL_USER }}
+          subject: "Build failed notification from user <${{ secrets.GMAIL_USER }}>"
+          body: |
+            Build with commit message of ${{ github.event.head_commit.message }} on branch ${{ github.ref_name }} failed.
+            See details: ${{ github.run_url }}           

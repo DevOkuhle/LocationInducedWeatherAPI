@@ -62,18 +62,13 @@ import kotlin.collections.emptyList
 @HiltViewModel
 class LocationInducedViewModel @Inject constructor(private val locationInducedWeatherRepository: LocationInducedWeatherRepository, private val application: Application): ViewModel() {
 
-    private val _currentLocationWeatherInformationMutableStateFlow =
-        MutableStateFlow(LocationInducedCurrentWeatherResponse())
-    val currentLocationWeatherInformationMutableStateFlow =
-        _currentLocationWeatherInformationMutableStateFlow.asStateFlow()
+    private val _currentLocationWeatherInformationMutableStateFlow = MutableStateFlow(LocationInducedCurrentWeatherResponse())
+    val currentLocationWeatherInformationMutableStateFlow = _currentLocationWeatherInformationMutableStateFlow.asStateFlow()
 
-    private val _locationWeatherForecastMutableStateFlow =
-        MutableStateFlow(LocationInducedForecastWeatherResponse())
-    val locationWeatherForecastMutableStateFlow =
-        _locationWeatherForecastMutableStateFlow.asStateFlow()
+    private val _locationWeatherForecastMutableStateFlow = MutableStateFlow(LocationInducedForecastWeatherResponse())
+    val locationWeatherForecastMutableStateFlow = _locationWeatherForecastMutableStateFlow.asStateFlow()
 
-    private val _userLocationsInducedWeather =
-        MutableStateFlow(emptyList<SavedLocationWeatherForecast>())
+    private val _userLocationsInducedWeather = MutableStateFlow(emptyList<SavedLocationWeatherForecast>())
     val userLocationsInducedWeather = _userLocationsInducedWeather.asStateFlow()
 
     private val _failureResponseMutableStateFlow = MutableStateFlow(FailureResponse())

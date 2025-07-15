@@ -5,6 +5,8 @@
 * The repository uses CI/CD pipelining in github, the code is written in YAML languages. This makes it seemless to automate in github, it a very easy less code way to automate repository actions.
 * Github send automated emails to my email account for Push Notification.
 * Githubs automatically, build the project to check for any errors.
+* I did not use any code generation using an online tools, this repo is build is self-built using my knowledge and experience.
+* Because of time constraints I could not get to unit testing, but the repository is written in TDD, most of the testable code resided in the ViewModel.
 
 ** Architecture and Frameworks
 

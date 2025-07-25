@@ -26,23 +26,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import com.example.locationinducedweatherapp.R
-import com.example.locationinducedweatherapp.util.DisplayCircularProgressIndicator
-import com.example.locationinducedweatherapp.util.SetUpScaffoldTopBar
-import com.example.locationinducedweatherapp.viewModel.LocationInducedViewModel
+import com.example.locationinducedweatherapp.data.model.PackageLocationInducedWeatherViewModels
 
 @Composable
-fun ViewFavouriteLocationProfiles(locationInducedViewModel: LocationInducedViewModel) = with(locationInducedViewModel) {
+fun ViewFavouriteLocationProfiles(packageLocationInducedWeatherViewModels: PackageLocationInducedWeatherViewModels) = with(packageLocationInducedWeatherViewModels.locationInducedViewModel) {
     var loading by rememberSaveable { mutableStateOf(true) }
     var userCountryInput by rememberSaveable { mutableStateOf("") }
-    readUserFavouriteLocationProfiles()
-    Scaffold(modifier = modifier.fillMaxSize(),
-        topBar = {
-            SetUpScaffoldTopBar(locationInducedViewModel)
-        }
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        topBar = { SetUpScaffoldTopBar(packageLocationInducedWeatherViewModels.locationInducedViewModel) }
     ) { innerPadding ->
         if (loading) {
+            packageLocationInducedWeatherViewModels.locationInducedWeatherRoomViewModel.readUserFavouriteLocationProfiles()
             DisplayCircularProgressIndicator(modifier = modifier.fillMaxWidth(), innerPadding)
-            userFavouriteLocationProfiles = readUserFavouriteLocationProfiles.collectAsState().value
+            userFavouriteLocationProfiles = packageLocationInducedWeatherViewModels.locationInducedWeatherRoomViewModel.readUserFavouriteLocationProfiles.collectAsState().value
             if (userFavouriteLocationProfiles.isNotEmpty()) {
                 loading = false
             }
@@ -76,8 +73,8 @@ fun ViewFavouriteLocationProfiles(locationInducedViewModel: LocationInducedViewM
                                 .wrapContentHeight()
                                 .clickable {
                                     selectedFavouriteLocationProfileIndex = index
-                                    profileSelectedClickAction(locationInducedViewModel)
-                                    showWeatherForecastForFavouriteLocation(true)
+                                    packageLocationInducedWeatherViewModels.locationInducedWeatherViewModelCoordinator.profileSelectedClickAction()
+                                    packageLocationInducedWeatherViewModels.locationInducedWeatherRoomViewModel.showWeatherForecastForFavouriteLocation(true)
                                 }
                         ) {
                             Text(

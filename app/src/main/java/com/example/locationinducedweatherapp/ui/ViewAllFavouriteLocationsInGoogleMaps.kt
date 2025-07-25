@@ -11,8 +11,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import com.example.locationinducedweatherapp.R
-import com.example.locationinducedweatherapp.util.DisplayCircularProgressIndicator
-import com.example.locationinducedweatherapp.viewModel.LocationInducedViewModel
+import com.example.locationinducedweatherapp.data.model.PackageLocationInducedWeatherViewModels
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
@@ -21,14 +20,18 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 
 @Composable
-fun ViewAllFavouriteLocationsInGoogleMaps(locationInducedViewModel: LocationInducedViewModel) = with(locationInducedViewModel) {
-    readUserFavouriteLocationProfiles()
+fun ViewAllFavouriteLocationsInGoogleMaps(packageLocationInducedWeatherViewModels: PackageLocationInducedWeatherViewModels) = with(packageLocationInducedWeatherViewModels.locationInducedViewModel) {
     var loading by rememberSaveable { mutableStateOf(true) }
     if (loading) {
         DisplayCircularProgressIndicator(modifier)
-        userFavouriteLocationProfiles = readUserFavouriteLocationProfiles.collectAsState().value
+        if (!isInvocationFromGooglePlaces) {
+            packageLocationInducedWeatherViewModels.locationInducedWeatherRoomViewModel.readUserFavouriteLocationProfiles()
+        }
+
+        userFavouriteLocationProfiles = packageLocationInducedWeatherViewModels.locationInducedWeatherRoomViewModel.readUserFavouriteLocationProfiles.collectAsState().value
         if (userFavouriteLocationProfiles.isNotEmpty() || isInvocationFromGooglePlaces) {
             loading = false
+            isInvocationFromGooglePlaces = false
         }
     }
     else {
@@ -46,9 +49,9 @@ fun ViewAllFavouriteLocationsInGoogleMaps(locationInducedViewModel: LocationIndu
                 GoogleMap(cameraPositionState = cameraPositionState) {
                     if (isInvocationFromGooglePlaces) {
                         Marker(
-                            state = MarkerState(position = locationInducedViewModel.searchPlaceInGoogle ?: LatLng(0.0, 0.0)),
+                            state = MarkerState(position = searchPlaceInGoogle ?: LatLng(0.0, 0.0)),
                             title = stringResource(R.string.saved_location),
-                            snippet = "${locationInducedViewModel.searchPlaceInGoogle?.latitude}, ${locationInducedViewModel.searchPlaceInGoogle?.longitude}"
+                            snippet = "${searchPlaceInGoogle?.latitude}, ${searchPlaceInGoogle?.longitude}"
                         )
                         isInvocationFromGooglePlaces = false
                     } else {

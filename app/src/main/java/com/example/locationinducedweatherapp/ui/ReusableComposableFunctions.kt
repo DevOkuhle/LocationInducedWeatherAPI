@@ -1,4 +1,4 @@
-package com.example.locationinducedweatherapp.util
+package com.example.locationinducedweatherapp.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

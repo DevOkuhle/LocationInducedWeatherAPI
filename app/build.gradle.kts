@@ -32,16 +32,20 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
     kotlinOptions {
         jvmTarget = "17"
     }
+
     buildFeatures {
         compose = true
     }
+
     lint {
         abortOnError = false
         warningsAsErrors = false
@@ -49,6 +53,10 @@ android {
         htmlReport = true
         xmlReport = true
         textReport = true
+    }
+
+    tasks.withType<Test> {
+        useJUnitPlatform()
     }
 }
 
@@ -64,16 +72,28 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.maps.compose)
     implementation(libs.androidx.appcompat)
-    testImplementation(libs.junit)
     implementation(libs.material)
     implementation(libs.accompanist.systemuicontroller)
     implementation(libs.androidx.fragment.ktx)
-    androidTestImplementation(libs.androidx.junit)
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.junit.jupiter)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    //JUnit setup
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.ui.test.junit4)
+    testImplementation(libs.junit.jupiter.api)
+    testRuntimeOnly(libs.junit.jupiter.engine)
+
+    //Roboletric
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.core)
 
     //Firebase dependencies
     implementation(platform(libs.firebase.bom))
@@ -110,4 +130,10 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.androidx.activity.compose.v180)
     implementation(libs.places)
+
+    //Unit testing
+    testImplementation(libs.kotlin.test)
+    testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

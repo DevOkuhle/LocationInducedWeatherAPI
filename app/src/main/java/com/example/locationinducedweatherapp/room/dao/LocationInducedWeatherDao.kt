@@ -24,7 +24,4 @@ interface LocationInducedWeatherDao {
 
     @Query("SELECT * FROM user_favourite_location_profiles ORDER BY identifier ASC")
     fun readUserFavouriteLocationProfiles(): Flow<List<UserFavouriteLocationProfiles>>
-
-    @Query("SELECT EXISTS(SELECT 1 FROM user_favourite_location_profiles WHERE coordinates = :locationGridPoint)")
-    fun doesLocationAlreadyExist(locationGridPoint: String): Flow<Boolean>
 }

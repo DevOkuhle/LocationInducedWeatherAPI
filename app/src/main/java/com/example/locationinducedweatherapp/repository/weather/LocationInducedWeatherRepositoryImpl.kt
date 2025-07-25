@@ -38,22 +38,13 @@ class LocationInducedWeatherRepositoryImpl @Inject constructor(private val openW
             }
         }
 
-    override suspend fun addUserPreviousLocationsInducedWeather(savedLocationWeatherForecast: SavedLocationWeatherForecast) =
-        locationInducedWeatherDao.addUserLocationsInducedWeather(savedLocationWeatherForecast)
+    override suspend fun addUserPreviousLocationsInducedWeather(savedLocationWeatherForecast: SavedLocationWeatherForecast) = locationInducedWeatherDao.addUserLocationsInducedWeather(savedLocationWeatherForecast)
 
     override fun readUserPreviousLocationsInducedWeather(): Flow<List<SavedLocationWeatherForecast>> = locationInducedWeatherDao.readUserLocationsInducedWeather()
 
-    override suspend fun addUserFavouriteLocationProfiles(getUserFavouriteLocationProfiles: UserFavouriteLocationProfiles) =
-        withContext(Dispatchers.IO) {
-            locationInducedWeatherDao.addUserFavouriteLocationProfiles(getUserFavouriteLocationProfiles)
-        }
+    override suspend fun addUserFavouriteLocationProfiles(getUserFavouriteLocationProfiles: UserFavouriteLocationProfiles) = withContext(Dispatchers.IO) { locationInducedWeatherDao.addUserFavouriteLocationProfiles(getUserFavouriteLocationProfiles) }
 
-    override fun readUserFavouriteLocationProfiles(): Flow<List<UserFavouriteLocationProfiles>> =
-        locationInducedWeatherDao.readUserFavouriteLocationProfiles()
+    override fun readUserFavouriteLocationProfiles(): Flow<List<UserFavouriteLocationProfiles>> = locationInducedWeatherDao.readUserFavouriteLocationProfiles()
 
-    override fun getUserLocationsInducedWeatherByCoordinates(locationGridPoint: String): Flow<List<SavedLocationWeatherForecast>> =
-        locationInducedWeatherDao.getUserLocationsInducedWeatherByCoordinates(locationGridPoint)
-
-    override fun doesLocationAlreadyExist(locationGridPoint: String): Flow<Boolean> =
-        locationInducedWeatherDao.doesLocationAlreadyExist(locationGridPoint)
+    override fun getUserLocationsInducedWeatherByCoordinates(locationGridPoint: String): Flow<List<SavedLocationWeatherForecast>> = locationInducedWeatherDao.getUserLocationsInducedWeatherByCoordinates(locationGridPoint)
 }

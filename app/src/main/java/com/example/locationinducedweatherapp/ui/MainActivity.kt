@@ -1,6 +1,5 @@
 package com.example.locationinducedweatherapp.ui
 
-import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
@@ -9,15 +8,19 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
+import com.example.locationinducedweatherapp.data.model.PackageLocationInducedWeatherViewModels
 import com.example.locationinducedweatherapp.ui.navigation.LocationInducedWeatherNavigationGraph
 import com.example.locationinducedweatherapp.ui.theme.LocationInducedWeatherAppTheme
 import com.example.locationinducedweatherapp.util.Constants.Companion.GPS_STATUS_CODE
 import com.example.locationinducedweatherapp.viewModel.LocationInducedViewModel
+import com.example.locationinducedweatherapp.viewModel.LocationInducedWeatherRoomViewModel
+import com.example.locationinducedweatherapp.viewModel.LocationInducedWeatherViewModelCoordinator
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     private lateinit var locationInducedViewModel: LocationInducedViewModel
+    private lateinit var locationInducedWeatherRoomViewModel: LocationInducedWeatherRoomViewModel
     private val modifier: Modifier = Modifier
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,10 +28,18 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContent {
             LocationInducedWeatherAppTheme {
-                locationInducedViewModel = hiltViewModel<LocationInducedViewModel>()
+                locationInducedViewModel = hiltViewModel()
+                locationInducedWeatherRoomViewModel = hiltViewModel()
                 locationInducedViewModel.navigationController = rememberNavController()
                 locationInducedViewModel.modifier = modifier
-                LocationInducedWeatherNavigationGraph(locationInducedViewModel)
+                LocationInducedWeatherNavigationGraph(PackageLocationInducedWeatherViewModels(
+                    locationInducedViewModel = locationInducedViewModel,
+                    locationInducedWeatherRoomViewModel = locationInducedWeatherRoomViewModel,
+                    locationInducedWeatherViewModelCoordinator = LocationInducedWeatherViewModelCoordinator(
+                        locationInducedViewModel = locationInducedViewModel,
+                        locationInducedWeatherRoomViewModel = locationInducedWeatherRoomViewModel
+                    )
+                ))
             }
         }
     }

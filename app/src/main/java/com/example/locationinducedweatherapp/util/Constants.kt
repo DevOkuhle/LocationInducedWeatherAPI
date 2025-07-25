@@ -21,5 +21,10 @@ Constants {
         const val PERMISSION_TYPE_PERMANENTLY_DECLINED = 2
         const val SUCCESS_STATE = 0
         const val FAILURE_STATE = 1
+        const val LAST_UPDATED_DATE_AND_TIME = "dd-MM-yyyy-HH:mm"
+        const val FAILURE_STATE_WEATHER_FORECAST = 0
+        const val SUCCESS_STATE_WEATHER_FORECAST = 2
+        const val ONE_SECOND = 1000
+        const val DAY_OF_THE_WEEK_FORMATTER = "EEEE"
     }
 }

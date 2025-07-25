@@ -23,6 +23,4 @@ interface LocationInducedWeatherRepository {
     fun readUserFavouriteLocationProfiles(): Flow<List<UserFavouriteLocationProfiles>>
 
     fun getUserLocationsInducedWeatherByCoordinates(locationGridPoint: String): Flow<List<SavedLocationWeatherForecast>>
-
-    fun doesLocationAlreadyExist(locationGridPoint: String): Flow<Boolean>
 }

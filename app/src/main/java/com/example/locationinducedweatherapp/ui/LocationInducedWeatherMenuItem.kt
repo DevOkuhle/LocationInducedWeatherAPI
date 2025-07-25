@@ -28,6 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.example.locationinducedweatherapp.R
+import com.example.locationinducedweatherapp.data.model.PackageLocationInducedWeatherViewModels
 import com.example.locationinducedweatherapp.util.Constants.Companion.FAILURE_STATE
 import com.example.locationinducedweatherapp.util.Constants.Companion.SUCCESS_STATE
 import com.example.locationinducedweatherapp.viewModel.LocationInducedViewModel
@@ -35,73 +36,76 @@ import com.example.locationinducedweatherapp.viewModel.LocationInducedViewModel
 @SuppressLint("ConfigurationScreenWidthHeight")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LocationInducedWeatherMenuItem(locationInducedViewModel: LocationInducedViewModel) = with(locationInducedViewModel) {
-    val shouldShowMenuItems = locationInducedViewModel.shouldShowMenuItems.collectAsState().value
+fun LocationInducedWeatherMenuItem(packageLocationInducedWeatherViewModels: PackageLocationInducedWeatherViewModels) = with(packageLocationInducedWeatherViewModels.locationInducedViewModel) {
+    val shouldShowMenuItems = shouldShowMenuItems.collectAsState().value
     IconButton(
         modifier = modifier.padding(dimensionResource(R.dimen.dimension_30dp))
             .size(dimensionResource(R.dimen.dimension_30dp)),
-        onClick = { locationInducedViewModel.shouldShowMenuItems(!shouldShowMenuItems) }
+        onClick = { shouldShowMenuItems(!shouldShowMenuItems) }
     ) {
-        Icon(Icons.Default.Menu, contentDescription = "More options")
+        Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.more_options))
     }
     DropdownMenu(
         modifier = modifier.width(LocalConfiguration.current.screenWidthDp.dp/2),
         expanded = shouldShowMenuItems,
-        onDismissRequest = { locationInducedViewModel.shouldShowMenuItems(false) },
+        onDismissRequest = { shouldShowMenuItems(false) },
         offset = DpOffset(x = 0.dp, y = (-80).dp)
     ) {
         DropdownMenuItem(
             text = { Text(stringResource(R.string.add_favourite_location)) },
             onClick = {
-                locationInducedViewModel.setShouldAddEntityEntry(true)
-                locationInducedViewModel.shouldShowMenuItems(false)
+                packageLocationInducedWeatherViewModels.locationInducedWeatherRoomViewModel.setShouldAddEntityEntry(true)
+                shouldShowMenuItems(false)
             }
         )
         DropdownMenuItem(
             text = { Text(stringResource(R.string.view_favourites)) },
             onClick = {
-                locationInducedViewModel.shouldShowMenuItems(false)
-                locationInducedViewModel.navigateToViewFavouriteLocationProfilesScreen()            }
+                shouldShowMenuItems(false)
+                navigateToViewFavouriteLocationProfilesScreen()            }
         )
         DropdownMenuItem(
             text = { Text(stringResource(R.string.view_favourites_in_maps)) },
             onClick = {
-                locationInducedViewModel.shouldShowMenuItems(false)
-                locationInducedViewModel.navigateToViewAllFavouriteLocationsInGoogleMapsScreen()            }
+                shouldShowMenuItems(false)
+                navigateToViewAllFavouriteLocationsInGoogleMapsScreen()            }
         )
         DropdownMenuItem(
             text = { Text(stringResource(R.string.autocomplete_search)) },
             onClick = {
-                locationInducedViewModel.shouldShowMenuItems(false)
-                locationInducedViewModel.viewUserGooglePlacesScreen()            }
+                shouldShowMenuItems(false)
+                navigateToViewUserGooglePlacesScreen()            }
         )
     }
 }
 
 @Composable
-fun AddAProfileForSavedFavouriteLocation(locationInducedViewModel: LocationInducedViewModel) = with(locationInducedViewModel) {
+fun AddAProfileForSavedFavouriteLocation(packageLocationInducedWeatherViewModels: PackageLocationInducedWeatherViewModels) = with(packageLocationInducedWeatherViewModels.locationInducedViewModel) {
     val locationGridPoints = "${locationCoordinates.latitude};${locationCoordinates.longitude}"
-    doesLocationAlreadyExist(locationGridPoints)
-    val doesLocationAlreadyExist = doesLocationAlreadyExist.collectAsState(initial = false).value
+    packageLocationInducedWeatherViewModels.locationInducedWeatherRoomViewModel.doesLocationAlreadyExist()
+    val doesLocationAlreadyExist = packageLocationInducedWeatherViewModels.locationInducedWeatherRoomViewModel.doesLocationAlreadyExist.collectAsState().value
 
     when (doesLocationAlreadyExist) {
         SUCCESS_STATE -> {
-            AddFavouriteLocationIfItDoesNotAlreadyExists(locationInducedViewModel, true, locationGridPoints)
-            doesLocationAlreadyExist(-1)
+            AddFavouriteLocationIfItDoesNotAlreadyExists(packageLocationInducedWeatherViewModels, true, locationGridPoints)
+            packageLocationInducedWeatherViewModels.locationInducedWeatherRoomViewModel.doesLocationAlreadyExist(-1)
         }
         FAILURE_STATE -> {
-            AddFavouriteLocationIfItDoesNotAlreadyExists(locationInducedViewModel, false, locationGridPoints)
-            doesLocationAlreadyExist(-1)
+            AddFavouriteLocationIfItDoesNotAlreadyExists(packageLocationInducedWeatherViewModels, false, locationGridPoints)
+            packageLocationInducedWeatherViewModels.locationInducedWeatherRoomViewModel.doesLocationAlreadyExist(-1)
         }
     }
 }
 
 @Composable
-fun AddFavouriteLocationIfItDoesNotAlreadyExists(locationInducedViewModel: LocationInducedViewModel, isUserInputNeeded: Boolean, locationGridPoints: String) {
+fun AddFavouriteLocationIfItDoesNotAlreadyExists(packageLocationInducedWeatherViewModels: PackageLocationInducedWeatherViewModels, isUserInputNeeded: Boolean, locationGridPoints: String) = with(packageLocationInducedWeatherViewModels.locationInducedViewModel) {
     var userFavouriteLocationName by remember { mutableStateOf("") }
     var title = if (isUserInputNeeded) stringResource(R.string.user_input_message) else ""
     AlertDialog(
-        onDismissRequest = {},
+        onDismissRequest = {
+            shouldDismissAlertDialog(true)
+            packageLocationInducedWeatherViewModels.locationInducedWeatherRoomViewModel.setShouldAddEntityEntry(false)
+        },
         title = { Text(text = title) },
         text = {
             if (isUserInputNeeded) {
@@ -125,11 +129,11 @@ fun AddFavouriteLocationIfItDoesNotAlreadyExists(locationInducedViewModel: Locat
             Button(
                 onClick = {
                     if (isUserInputNeeded) {
-                        locationInducedViewModel.userGivenNameFavouriteLocation = userFavouriteLocationName
-                        locationInducedViewModel.recordLocationGenerallyOrAsFavourite(locationGridPoints)
+                        packageLocationInducedWeatherViewModels.locationInducedWeatherRoomViewModel.userGivenNameFavouriteLocation = userFavouriteLocationName
+                        packageLocationInducedWeatherViewModels.locationInducedWeatherViewModelCoordinator.recordLocationGenerallyOrAsFavourite(locationGridPoints)
                     }
-                    locationInducedViewModel.shouldDismissAlertDialog(true)
-                    locationInducedViewModel.setShouldAddEntityEntry(false)
+                    shouldDismissAlertDialog(true)
+                    packageLocationInducedWeatherViewModels.locationInducedWeatherRoomViewModel.setShouldAddEntityEntry(false)
                 },
                 enabled = if (isUserInputNeeded) userFavouriteLocationName.trim().length > 3 else true
             ) {

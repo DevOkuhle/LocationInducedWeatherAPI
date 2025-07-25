@@ -1,0 +1,11 @@
+package com.example.locationinducedweatherapp.data.model
+
+import com.example.locationinducedweatherapp.viewModel.LocationInducedViewModel
+import com.example.locationinducedweatherapp.viewModel.LocationInducedWeatherRoomViewModel
+import com.example.locationinducedweatherapp.viewModel.LocationInducedWeatherViewModelCoordinator
+
+data class PackageLocationInducedWeatherViewModels(
+    val locationInducedViewModel: LocationInducedViewModel,
+    val locationInducedWeatherRoomViewModel: LocationInducedWeatherRoomViewModel,
+    val locationInducedWeatherViewModelCoordinator: LocationInducedWeatherViewModelCoordinator
+)

@@ -42,7 +42,7 @@ fun LocationInducedWeatherFailure(locationInducedViewModel: LocationInducedViewM
                         start = dimensionResource(R.dimen.dimension_8dp),
                         end = dimensionResource(R.dimen.dimension_8dp)
                     ),
-                text = locationInducedViewModel.failureResponse.failureMessage,
+                text = failureResponse.failureMessage,
                 style = MaterialTheme.typography.titleLarge
             )
         }
@@ -52,9 +52,8 @@ fun LocationInducedWeatherFailure(locationInducedViewModel: LocationInducedViewM
                 .fillMaxWidth()
         ) {
             Button(
-                onClick = { locationInducedViewModel.navigateToLocationInducedWeatherReportScreen() },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
+                onClick = { navigateToLocationInducedWeatherReportScreen() },
+                modifier = modifier.align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .padding(dimensionResource(R.dimen.dimension_65dp))
             ) {

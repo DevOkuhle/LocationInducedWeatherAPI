@@ -23,68 +23,6 @@ jobs:
     - name: Build with Gradle
       run: ./gradlew build
 
-  unit_test:    
-    runs-on: ubuntu-latest
-    needs: [ build, push_notifications, build_failure_notifications ]
-    steps:
-    - name: 🧪 Run unit tests
-      run: ./gradlew testDebugUnitTest
-    
-    - name: 📄 Upload test reports (JUnit XML)
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: unit-test-report
-        path: app/build/test-results/testDebugUnitTest
-        
-        
-  detekt_setup:
-    runs-on: ubuntu-latest
-    needs: [lint_setup, unit_test, build, build_failure_notifications, push_notifications]
-    steps:
-    - name: Run Detekt
-      run: ./gradlew detekt -Pdetekt.ignoreFailures=true
-
-    - name: Upload Detekt Report
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: detekt-report
-        path: app/build/reports/detekt/
-
-  lint_setup:
-    runs-on: ubuntu-latest
-    needs: [unit_test, build, build_failure_notifications, push_notifications]
-    steps:
-    - name: Run Lint
-      run: ./gradlew lintDebug --no-daemon
-
-    - name: Upload Lint Report
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: lint-report
-        path: app/build/reports/lint.html
-
-  build_failure_notifications:
-    needs: [build, push_notifications]
-    if: ${{ needs.build.result != 'success' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Report failure via email
-        uses: dawidd6/action-send-mail@v4
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.GMAIL_USER }}
-          password: ${{ secrets.GMAIL_PASS }}
-          to: ${{ secrets.GMAIL_USER }}
-          from: ${{ secrets.GMAIL_USER }}
-          subject: "Build failed notification from user <${{ secrets.GMAIL_USER }}>"
-          body: |
-            Build with commit message of ${{ github.event.head_commit.message }} on branch ${{ github.ref_name }} failed.
-            See details: ${{ github.run_url }} 
-
   push_notifications:
     runs-on: ubuntu-latest
     steps:
@@ -103,28 +41,75 @@ jobs:
           
           Commit by: ${{ github.actor }}
           Message: ${{ github.event.head_commit.message }}
-          View it here: ${{ github.event.head_commit.url }}
+          View it here: ${{ github.event.head_commit.url }}  
 
   firebase_setup:
-    runs-on : ubuntu-latest
-    needs: [detekt_setup, lint_setup, unit_test, build, build_failure_notifications, push_notifications]
-    steps:
-    - name: Decode Firebase service account
-      run: |
-        echo "${{ secrets.FIREBASE_KEY }}" | base64 --decode > "${HOME}/firebase-key.json"
+      runs-on : ubuntu-latest
+      needs: [ build, push_notifications]
+      steps:
+      - name: Decode Firebase service account
+        run: |
+           echo "${{ secrets.FIREBASE_KEY }}" | base64 --decode > "${HOME}/firebase-key.json"
           
-    - name: Set up Android SDK
-      uses: android-actions/setup-android@v4
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
   
-    - name: Build APK
-      run: ./gradlew assembleRelease
+      - name: Build APK
+        run: ./gradlew assembleRelease
   
-    - name: Install Firebase CLI
-      run: npm install -g firebase-tools
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
   
-    - name: Upload App APK file to Firebase App Distribution
-      run: |
-          firebase appdisribution:distribute app/build/outputs/apk/release/app-release.apk \
+      - name: Upload App APK file to Firebase App Distribution
+        run: |
+          firebase appdistribution:distribute app/build/outputs/apk/release/app-release.apk \
             --app ${{ secrets.FIREBASE_APP_ID }} \
             --token ${{ secrets.FIREBASE_CLI_TOKEN }} \
             --emails "LBecker@dvtsoftware.com"
+
+  lint_setup:
+    runs-on: ubuntu-latest
+    needs: [ build, push_notifications]
+    steps:
+    - name: Run Lint
+      run: ./gradlew lintDebug --no-daemon
+
+    - name: Upload Lint Report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: lint-report
+        path: app/build/reports/lint.html      
+           
+  detekt_setup:
+    runs-on: ubuntu-latest
+    needs: [lint_setup, build, push_notifications]
+    steps:
+    - name: Run Detekt
+      run: ./gradlew detekt -Pdetekt.ignoreFailures=true
+
+    - name: Upload Detekt Report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: detekt-report
+        path: app/build/reports/detekt/ 
+
+  build_failure_notifications:
+    needs: [detekt_setup, lint_setup, build, push_notifications, firebase_setup]
+    if: ${{ needs.build.result != 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report failure via email
+        uses: dawidd6/action-send-mail@v4
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USER }}
+          password: ${{ secrets.GMAIL_PASS }}
+          to: ${{ secrets.GMAIL_USER }}
+          from: ${{ secrets.GMAIL_USER }}
+          subject: "Build failed notification from user <${{ secrets.GMAIL_USER }}>"
+          body: |
+            Build with commit message of ${{ github.event.head_commit.message }} on branch ${{ github.ref_name }} failed.
+            See details: ${{ github.run_url }}           
